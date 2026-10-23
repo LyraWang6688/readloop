@@ -169,16 +169,24 @@ node extension/tools/browser-smoke.mjs
 - **本地临时产物**：冒烟会在仓库根目录建 `.chrome-smoke-profile/`（已约定加入 `.gitignore`，不提交），脚本退出时自动删除；如果上次异常退出留下该目录，直接删掉即可。
 - 本沙箱里的 Chrome 没有外网/本机回环网络，所以「加载真实网页 → content script 上报」这一段用 `selftest.mjs` 的 vm 单测覆盖，浏览器里改用「service worker 广播选区」验证侧边栏一侧。
 
-## 打包（Chrome 商店 / 分发）
+## 打包与发布（离线包 / GitHub Release）
 
 ```bash
-cd extension
-zip -r ../readloop-extension.zip . -x "*.DS_Store" -x "tools/*"
+# 1. 改版本（manifest.json 的 version）
+# 2. 打包（产物在 dist/，已 gitignore；会自检版本/必需文件/不混入 tools）
+bash scripts/pack-extension.sh
+
+# 3. 发 Release（tag 约定：extension-v<version>）
+gh release create extension-v<version> dist/readloop-extension-<version>.zip \
+  --target main \
+  --title "ReadLoop Chrome Extension v<version>" \
+  --notes-file release-notes.md
 ```
 
 `tools/` 是开发自查脚本（图标生成 / 逻辑自测 / 真机冒烟），不打进发布包。
-
 zip 根目录必须直接包含 `manifest.json`（即打包 `extension/` 里的内容，而不是 `extension/` 这一层目录）。
+
+发布记录：<https://github.com/LyraWang6688/readloop/releases>
 
 ## 已知未验证项
 
