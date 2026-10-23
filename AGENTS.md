@@ -81,6 +81,9 @@ LICENSE_SECRET=你的密钥 npx tsx scripts/license-gen.ts 10
 # 端到端接口冒烟（起真实 next start，不调飞书/模型）
 bash scripts/smoke-api.sh
 
+# 规则离线回放（SM-2 vs FSRS；结论见 docs/EVALUATION.md）
+npx tsx scripts/replay-compare.ts
+
 # 发布到生产（git push → 服务器 git pull → Docker 重建 → 健康检查）
 bash scripts/deploy-server.sh
 ```

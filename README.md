@@ -50,6 +50,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | [API_IMPLEMENTATION.md](docs/API_IMPLEMENTATION.md) | 接口实现规格：签名/选题/题面/配对/幂等 |
 | [REVIEW_RULES.md](docs/REVIEW_RULES.md) | 复习与出题规则（确定性部分） |
 | [MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md) | 规则的理论依据、现存偏差、待验证假设 |
+| [EVALUATION.md](docs/EVALUATION.md) | 规则离线回放：SM-2 vs FSRS 的对比与结论 |
 | [DECISIONS.md](docs/DECISIONS.md) | 决策记录：为什么这么定 |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | 部署方案与服务器现状 |
 | [CHROME_EXTENSION_MVP.md](docs/CHROME_EXTENSION_MVP.md) | 插件加载、配置、配对码、自测 |
@@ -84,6 +85,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
 | 动态难度（`difficulty.ts`） | ✅ 46 项自测（20 题门槛 + 贝叶斯平滑，已接 `today.performance`） |
 | 学习效果指标（`metrics.ts`） | ✅ 80 项自测 + `/api/review/metrics` |
+| 规则离线回放（SM-2 vs FSRS） | ✅ `scripts/replay-compare.ts`，结论见 [EVALUATION.md](docs/EVALUATION.md) |
 | 日期 / 签名（`date.ts` / `token.ts`） | ✅ 22 + 29 项自测 |
 | 每日组题（`selection.ts` / `questions.ts`） | ✅ 89 项自测 |
 | today/submit 编排（`review.ts`） | ✅ 91 项自测 |
@@ -140,6 +142,9 @@ npx tsx scripts/metrics-check.ts       # 80
 
 ```bash
 bash scripts/smoke-api.sh              # 75 项
+
+# 规则回放（合成学习者，不碰网络/数据库）
+npx tsx scripts/replay-compare.ts
 ```
 
 发授权码（离线计算，不写库）：
