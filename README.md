@@ -79,7 +79,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 部分 | 状态 |
 |---|---|
 | 架构 / 规则 / 理论文档 | ✅ |
-| 技能包（Skill） | ✅ 已进 Store，契约同步到 `readloop-v0.2.3` / `readloop-service-v0.2.1`（PR #291/#294/#302） |
+| 技能包（Skill） | ✅ 已进 Store，契约同步到 `readloop-v0.2.4` / `readloop-service-v0.2.2`（PR #291/#294/#302/#305） |
 | 记忆调度（`scheduler.ts`） | ✅ 29 项自测 |
 | 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
 | 动态难度（`difficulty.ts`） | ✅ 46 项自测（20 题门槛 + 贝叶斯平滑，已接 `today.performance`） |
