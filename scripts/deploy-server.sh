@@ -38,7 +38,7 @@ fi
 LOCAL_HEAD="$(git rev-parse HEAD)"
 
 if [[ "$SKIP_PUSH" == "0" ]]; then
-  echo "==> push 到 GitHub（origin/$BRANCH）"
+  echo "==> push 到 GitHub（origin/${BRANCH}）"
   git push origin "$BRANCH"
 fi
 
