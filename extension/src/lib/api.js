@@ -84,7 +84,7 @@ export async function bindPairing({ session, code }) {
 /**
  * 配对第一步（插件侧轮询）：GET /api/setup/app/pair?code=CODE（无需鉴权）
  * - 还没被宿主绑定 / 凭证已被取走 → 返回 null（调用方继续轮询或提示）
- * - 命中 → 返回 { appId, appSecret, appToken }，服务端只给一次
+ * - 命中 → 返回 { appId, appSecret, appToken, hostToken }，服务端只给一次
  * - 429 / 其它错误 → 抛 ApiError
  */
 export async function getPairingCredentials(code) {
@@ -104,6 +104,8 @@ export async function getPairingCredentials(code) {
     const appId = readText(data?.app_id);
     const appSecret = readText(data?.app_secret);
     const appToken = readText(data?.app_token);
+    // 宿主绑定配对码时会把 host_token 一并发过来：插件据此免去手填
+    const hostToken = readText(data?.host_token);
 
     if (!appId || !appSecret) {
       throw new ApiError("配对接口返回的凭证不完整", {
@@ -111,7 +113,7 @@ export async function getPairingCredentials(code) {
       });
     }
 
-    return { appId, appSecret, appToken };
+    return { appId, appSecret, appToken, hostToken };
   } catch (error) {
     // 404 = 配对码还没被宿主绑定（或已被取走），不是错误，交给调用方继续轮询
     if (error instanceof ApiError && error.status === 404) {

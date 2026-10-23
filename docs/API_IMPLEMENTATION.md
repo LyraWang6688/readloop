@@ -362,15 +362,19 @@ lark.registerApp({
 ```
 插件「一键配置」：本地生成 6 位码（100000–999999）→ 显示给用户 → 每 3 秒轮询 GET /api/setup/app/pair?code=CODE
 用户：把 6 位码告诉宿主
-宿主：POST /api/setup/app/pair { session, code }   ← 只做绑定，不拿 Secret
-插件：下一次轮询命中 → 拿到 { app_id, app_secret, app_token } → 存 chrome.storage.local
+宿主：POST /api/setup/app/pair { session, code }（带自己的 host_token）← 只做绑定，不拿 Secret
+插件：下一次轮询命中 → 拿到 { app_id, app_secret, app_token, host_token } → 存 chrome.storage.local
 ```
+
+> **host_token 随配对一起下发**：POST 时服务端从 `Authorization` 里取宿主的 host_token，
+> 存到会话上（只存内存、交付即销毁）；GET 时一并交给插件。这样插件不用再让用户从
+> `~/.readloop/config.json` 手抄 token，配对成功即全部就绪。宿主上下文中仍然看不到 Secret。
 
 - `POST /api/setup/app/pair`（`requireHost()` 通过）：校验 session 为 `completed`、code 为 6 位数字 →
   绑定 `code → session`，返回 `{ paired: true }`
 - `GET /api/setup/app/pair?code=`（**无需鉴权**）：
   - 未绑定/码错 → 404 `SETUP_PAIR_CODE_INVALID`
-  - 命中 → 返回 `{ app_id, app_secret, app_token }`，**一次性**，返回后立即从内存删除凭证与会话
+  - 命中 → 返回 `{ app_id, app_secret, app_token, host_token }`，**一次性**，返回后立即从内存删除凭证、host_token 与会话
   - 只允许同码 20 次尝试（内存计数），超出 429 `RATE_LIMITED`（防爆破；6 位码 + 10 分钟 TTL 已够 MVP）
 - 插件拿不到 Secret 之外的任何东西；宿主/模型上下文里**永远不出现 Secret**
 
@@ -418,8 +422,9 @@ lark.registerApp({
 2. `submit` 的 `answer`：选择题支持「选项原文」或「字母 A/B/C/D」，两者都判对
 3. `today` 的 `options` 是 4 个（正确答案 + 3 个干扰项）；Store 示例里的 3 个只是示例
 4. `today` 的 `answered` 字段语义（服务端不记进度，恒为 0）
-5. 配对流程：`POST pair` 只绑定，Secret 由插件用 `GET pair?code=` 自取（宿主上下文不出现 Secret）；
-   `status` 默认不返回 `app_secret`，兜底手动路径要带 `&reveal_secret=1`
+5. 配对流程：`POST pair` 只绑定（**同时记下宿主的 host_token**），Secret 与 host_token 由插件用
+   `GET pair?code=` 自取（宿主上下文不出现 Secret）；`status` 默认不返回 `app_secret`，
+   兜底手动路径要带 `&reveal_secret=1`
 6. 题面 MVP 走确定性模板，LLM 润色默认关闭（`READLOOP_QUESTION_LLM=1` 开启）
 7. `status` 的 `checks` 增加 `publish` / `publish_details`；`expired` 用 410 + 成功信封；
    配对 GET 超过 20 次尝试返回 429 `RATE_LIMITED`

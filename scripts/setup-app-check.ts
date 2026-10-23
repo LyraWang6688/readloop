@@ -223,6 +223,24 @@ check("返回 app_token", delivered.ok ? delivered.appToken : null, "bascnAppTok
 check("取走后会话被删除", countSetupSessions(), 1);
 check("同一码不能第二次取走", deliveryReason(takePairCredentials("246810", NOW + 3_000)), "invalid_code");
 
+// 宿主绑定时带来的 host_token 会随凭证一起交付（插件实现全自动配置）
+resetSetupSessionStore();
+const tokenSession = seedCompletedSession({ appToken: "bascnAppTokenWithHostToken" });
+check(
+  "带 host_token 绑定成功",
+  bindReason(bindPairCode(tokenSession.id, "112233", NOW, "host-token-from-host")),
+  "ok"
+);
+const tokenDelivery = takePairCredentials("112233", NOW + 2_000);
+check("交付结果包含 host_token", tokenDelivery.ok ? tokenDelivery.hostToken : null, "host-token-from-host");
+check("交付后会话被删除", countSetupSessions(), 0);
+
+resetSetupSessionStore();
+const noTokenSession = seedCompletedSession({ appToken: "bascnAppTokenNoHostToken" });
+bindPairCode(noTokenSession.id, "445566", NOW);
+const noTokenDelivery = takePairCredentials("445566", NOW + 2_000);
+check("宿主没带 token 时为 null", noTokenDelivery.ok ? noTokenDelivery.hostToken : "n/a", null);
+
 // 宿主重新绑定新码时，旧码立即失效
 resetSetupSessionStore();
 const rebind = seedCompletedSession();

@@ -7,13 +7,14 @@
  *   插件「一键配置」：本地生成 6 位码（100000–999999）→ 显示给用户 → 每 3 秒轮询 GET
  *   用户：把 6 位码告诉宿主
  *   宿主：POST { session, code }      ← 只做绑定，拿不到 Secret
- *   插件：下一次 GET 轮询命中 → 拿到 { app_id, app_secret, app_token }，服务端随即销毁
+ *   插件：下一次 GET 轮询命中 → 拿到 { app_id, app_secret, app_token, host_token }，服务端随即销毁
  *
  * POST：requireHost()；GET：**无需鉴权**（插件没有 host_token）。
  * GET 只允许同一配对码 20 次尝试，超出 429（内存计数，防爆破）。
  */
 
 import {
+  bearerToken,
   jsonError,
   jsonOk,
   readJsonBody,
@@ -55,7 +56,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = bindPairCode(sessionId, code);
+    // 宿主调这个接口时带的就是自己的 host_token；顺手交给插件，省掉手填
+    const hostToken = bearerToken(request);
+    const result = bindPairCode(sessionId, code, Date.now(), hostToken);
     if (!result.ok) {
       switch (result.reason) {
         case "session_not_found":
@@ -105,6 +108,7 @@ export async function GET(request: Request) {
       app_id: delivery.appId,
       app_secret: delivery.appSecret,
       app_token: delivery.appToken,
+      host_token: delivery.hostToken,
     });
     // 凭证响应绝不能被缓存
     response.headers.set("Cache-Control", "no-store");

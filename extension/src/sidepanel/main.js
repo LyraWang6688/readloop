@@ -396,13 +396,19 @@ async function finishPairing(kind, payload) {
         appSecret: payload.appSecret,
         appToken: payload.appToken,
       });
+      // 宿主绑定时带来的 host_token：一并写入，插件不再需要用户手抄
+      if (payload.hostToken) {
+        await saveSettings({ hostToken: payload.hostToken });
+      }
       state.settings = await getSettings();
       fillSettingsForm(state.settings);
       renderConfigStatus();
       showNotice(
         "一键配置成功",
         "success",
-        `已收到飞书应用凭证（App ID：${payload.appId}），表格 app_token 也自动填好了。\n建议点一次「测试飞书连接」，确认应用已被加成表格协作者、权限已发布。`
+        payload.hostToken
+          ? `已收到飞书应用凭证（App ID：${payload.appId}）和 host_token，都已自动填好。\n建议点一次「测试飞书连接」，确认应用已被加成表格协作者、权限已发布。`
+          : `已收到飞书应用凭证（App ID：${payload.appId}），表格 app_token 也自动填好了。\n建议点一次「测试飞书连接」，确认应用已被加成表格协作者、权限已发布。`
       );
       showToast("配对成功，飞书凭证已保存");
     } catch (error) {

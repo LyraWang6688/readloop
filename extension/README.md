@@ -40,7 +40,7 @@ extension/
 
 | 东西 | 从哪来 |
 |---|---|
-| `host_token` | AI 宿主初始化时用 8 位授权码换到，交给用户填进插件（授权到期会返回 402，续费后重新激活即可） |
+| `host_token` | **一键配置成功时自动填入**（宿主绑定配对码时会把 token 一并交过来）；也可手动粘贴（授权到期会返回 402，续费后重新激活即可） |
 | 飞书多维表格 | 把 ReadLoop 模板 Base 复制到自己的飞书空间 |
 | 飞书应用 App ID / Secret | 宿主「一键创建用户飞书应用」完成后，用**配对码**送进插件；也可以手动创建 |
 | 模型 base_url / 模型名 / API Key | 用户自带的模型（BYOK，默认推荐 DeepSeek） |
@@ -51,7 +51,7 @@ extension/
 
 1. 侧边栏点「生成配对码」→ 本地生成 **6 位数字**并显示。
 2. 把这个码告诉 AI 宿主（例如：「ReadLoop 配对码 123456」）。
-3. 宿主调 `POST /api/setup/app/pair`（带 host_token）把码绑定到创建会话。
+3. 宿主调 `POST /api/setup/app/pair`（带 host_token）把码绑定到创建会话；服务端同时记下宿主的 host_token。
 4. 插件每 3 秒轮询 `GET /api/setup/app/pair?code=…`（无需鉴权），**最多等 5 分钟**。
 5. 命中后一次拿到 `{ app_id, app_secret, app_token }`，写进 `chrome.storage.local`（Secret）与 `chrome.storage.sync`（App ID / app_token），界面提示「一键配置成功」。
 
@@ -71,7 +71,7 @@ extension/
 
 1. 在网页里划选一段英文（右键菜单或点图标打开侧边栏）。
 2. 输入自己的中文译文。
-3. 点「开始 AI 对比诊断」→ 插件调 `POST {服务地址}/api/diagnose`（带 `Authorization: Bearer <host_token>`，模型配置随请求体上传，服务端不保存）。
+3. 插件取凭证时会一并拿到 `host_token` 并自动保存；点「开始 AI 对比诊断」→ 插件调 `POST {服务地址}/api/diagnose`（带 `Authorization: Bearer <host_token>`，模型配置随请求体上传，服务端不保存）。
 4. 看参考翻译、理解正确 / 可以优化 / 遗漏要点，勾选要沉淀的知识点。
 5. 点「一键存入我的飞书表格」→ 插件直连飞书：
    - 写一条 `capture_events`：采集时间、页面链接/标题、选中原文、我的译文、AI 参考译文、诊断结果（JSON）、抽出的知识点（归一化内容，逗号分隔）、是否新点；

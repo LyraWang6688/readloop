@@ -24,7 +24,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { existsSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -289,7 +289,12 @@ function routeMockRequest(url, method, body) {
       if (mock.pairAttempts === 1) {
         return { status: 404, payload: { success: false, error: { code: "SETUP_PAIR_CODE_INVALID", message: "配对码未绑定" } } };
       }
-      return ok({ app_id: "cli_paired_smoke", app_secret: "secret_paired_smoke", app_token: "bas_paired_smoke" });
+      return ok({
+        app_id: "cli_paired_smoke",
+        app_secret: "secret_paired_smoke",
+        app_token: "bas_paired_smoke",
+        host_token: "host_paired_smoke",
+      });
     }
     return ok({ paired: true });
   }
@@ -563,7 +568,8 @@ try {
   const swSession = await new CdpSession(serviceWorker.webSocketDebuggerUrl).connect();
   await swSession.send("Runtime.enable");
   const manifestVersion = await swSession.evaluate("chrome.runtime.getManifest().version");
-  check("service worker 里读到 manifest 版本 0.3.0", manifestVersion === "0.3.0", manifestVersion);
+  const expectedManifestVersion = JSON.parse(readFileSync(resolve(EXTENSION_DIR, "manifest.json"), "utf8")).version;
+  check(`service worker 里读到 manifest 版本 ${expectedManifestVersion}`, manifestVersion === expectedManifestVersion, manifestVersion);
   check(
     "service worker 里 chrome.sidePanel / contextMenus 可用",
     (await swSession.evaluate("Boolean(chrome.sidePanel && chrome.contextMenus && chrome.action)")) === true
@@ -726,12 +732,14 @@ try {
   const pairedState = JSON.parse(
     await session.evaluate(`
       (async () => {
-        const local = await chrome.storage.local.get(["feishuAppSecret"]);
+        const local = await chrome.storage.local.get(["feishuAppSecret", "hostToken"]);
         return JSON.stringify({
           appId: document.getElementById("feishuAppId").value,
           appSecret: document.getElementById("feishuAppSecret").value,
           appToken: document.getElementById("feishuTableUrl").value,
+          hostTokenInput: document.getElementById("hostToken").value,
           storedSecret: local.feishuAppSecret,
+          storedHostToken: local.hostToken,
         });
       })()
     `)
@@ -742,6 +750,12 @@ try {
       pairedState.appSecret === "secret_paired_smoke" &&
       pairedState.appToken === "bas_paired_smoke" &&
       pairedState.storedSecret === "secret_paired_smoke",
+    JSON.stringify(pairedState)
+  );
+  check(
+    "配对一并下发 host_token 并自动填入（覆盖手填值）",
+    pairedState.hostTokenInput === "host_paired_smoke" &&
+      pairedState.storedHostToken === "host_paired_smoke",
     JSON.stringify(pairedState)
   );
   check("配对轮询先 404 后命中（未绑定时继续轮询）", mock.pairAttempts >= 2, `attempts=${mock.pairAttempts}`);

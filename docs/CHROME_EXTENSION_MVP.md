@@ -26,7 +26,7 @@
 | 设置项 | 从哪来 |
 |---|---|
 | 服务地址 | 生产默认 `https://readinsight.bamamei.online`；本地填 `http://localhost:3000` |
-| host_token | Skill 初始化第 1 步激活后写入 `~/.readloop/config.json`，把它填进来（401/402 时侧边栏会给可读提示） |
+| host_token | **一键配置成功时自动填入**（宿主绑定配对码时会把 token 一并交过来）；也可手动粘贴 |
 | 模型配置 | 用户自带（BYOK）：`base_url` / `model` / `api_key`，默认推荐 DeepSeek |
 | 飞书凭证 | **一键配置**：点「一键配置」显示 6 位配对码 → 把码交给宿主 → 宿主调 `/api/setup/app/pair` 绑定 → 插件自动轮询取回 App ID / Secret / app_token |
 | 兜底 | 也可手填 App ID / Secret + 表格链接（服务端 `status?...&reveal_secret=1` 只给一次） |

@@ -70,6 +70,11 @@ export interface SetupSessionRecord {
   error: string | null;
   /** 已绑定的 6 位配对码（同一会话重新绑定时替换） */
   pairCode: string | null;
+  /**
+   * 宿主绑定配对码时带来的 host_token：插件取凭证时一并下发，
+   * 省掉用户从宿主配置里手抄 token 的一步。凭证交付后随会话一起销毁。
+   */
+  pairHostToken: string | null;
   pairAttempts: number;
 }
 
@@ -141,6 +146,7 @@ export function createSessionRecord(input: {
     checks: null,
     error: null,
     pairCode: null,
+    pairHostToken: null,
     pairAttempts: 0,
   };
 }
@@ -161,6 +167,7 @@ export function advanceSessionState(
     if (nowMs < session.expiresAt) return false;
     session.status = "expired";
     session.credentials = null;
+    session.pairHostToken = null;
     session.secretRevealedToHost = true;
     session.settledAt = nowMs;
     session.error = EXPIRED_MESSAGE;
@@ -425,7 +432,8 @@ export type PairBindResult =
 export function bindPairCode(
   sessionId: string,
   rawCode: unknown,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  hostToken?: string | null
 ): PairBindResult {
   cleanupSetupSessions(nowMs);
 
@@ -472,6 +480,9 @@ export function bindPairCode(
 
   session.pairCode = code;
   session.pairAttempts = 0;
+  // requireHost() 已经验过签名，这里只做去空白；没有就保持 null（旧插件/手动绑定）
+  session.pairHostToken =
+    typeof hostToken === "string" && hostToken.trim() ? hostToken.trim() : null;
   return { ok: true, session };
 }
 
@@ -482,7 +493,14 @@ export type PairDeliveryFailureReason =
   | "too_many_attempts";
 
 export type PairDeliveryResult =
-  | { ok: true; appId: string; appSecret: string; appToken: string }
+  | {
+      ok: true;
+      appId: string;
+      appSecret: string;
+      appToken: string;
+      /** 宿主绑定时带来的 host_token；没有绑定时为 null（插件可以留着手填） */
+      hostToken: string | null;
+    }
   | { ok: false; reason: PairDeliveryFailureReason; message: string };
 
 /**
@@ -545,6 +563,7 @@ export function takePairCredentials(
     appId: session.credentials.appId,
     appSecret: session.credentials.appSecret,
     appToken: session.appToken,
+    hostToken: session.pairHostToken,
   };
   // 凭证一次性交付：取走即销毁会话（含 Secret）
   deleteSetupSession(session.id);
