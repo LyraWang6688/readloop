@@ -405,9 +405,14 @@ lark.registerApp({
 
 ---
 
-## 十、与 Store 文档的差异（待同步）
+## 十、与 Store 文档的差异（✅ 已同步）
 
-以下实现细节需要同步回 Store 的 `skills/readloop/references/api.md`（本仓库不保留副本）：
+> 2026-10-23：Store 的 `skills/readloop` 已按本节同步，版本 **0.2.0**，
+> PR <https://github.com/LyraWang6688/ai-capability-store/pull/291>，tag `readloop-v0.2.0`
+> （`check_tag_version.py --missing main` 通过：42 个已登记版本都有 tag）。
+> 以后再改接口，按本节同样流程更新 Store 文档并 bump 版本 + 打 tag。
+
+本次同步到 Store `skills/readloop` 的差异清单（留档，改接口时对照）：
 
 1. `submit` 的 `updates` 增加 `难度因子`、`最近暴露` 两个字段（不写回会丢 ease）
 2. `submit` 的 `answer`：选择题支持「选项原文」或「字母 A/B/C/D」，两者都判对

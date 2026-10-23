@@ -78,7 +78,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 部分 | 状态 |
 |---|---|
 | 架构 / 规则 / 理论文档 | ✅ |
-| 技能包（Skill） | ✅ 已进 AI Capability Store（**需按 `docs/API_IMPLEMENTATION.md` §10 同步契约**） |
+| 技能包（Skill） | ✅ 已进 Store，契约已同步到 `readloop-v0.2.0`（PR #291） |
 | 记忆调度（`scheduler.ts`） | ✅ 29 项自测 |
 | 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
 | 动态难度（`difficulty.ts`） | ✅ 20 项自测 |
