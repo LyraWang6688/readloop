@@ -1,27 +1,22 @@
 import type { Metadata } from 'next';
-import { Inspector } from 'react-dev-inspector';
-import { LoadingOverlay } from '@/components/loading-overlay';
 import { ClientLayout } from '@/components/client-layout';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: '英文阅读教练 | 个性化英语学习',
-    template: '%s | 英文阅读教练',
+    default: 'ReadLoop | 读的时候暴露短板，AI 助手按时帮你复习',
+    template: '%s | ReadLoop',
   },
   description:
-    '在真实阅读场景中提升英文能力。智能识别薄弱点，个性化练习，稳步提升阅读理解水平。',
+    '在真实阅读中暴露薄弱点，沉淀成你自己的知识库，再由 AI 助手按记忆曲线每天陪你复习。',
   keywords: [
-    '英语学习',
     '英文阅读',
-    '英语练习',
-    '阅读理解',
-    '词汇学习',
-    '翻译练习',
-    '英语工具',
+    '间隔重复',
+    '翻译诊断',
+    '知识点',
+    '复习',
   ],
-  authors: [{ name: 'English Reading Coach' }],
-  generator: 'Coze Code',
+  authors: [{ name: 'ReadLoop' }],
   robots: {
     index: true,
     follow: true,
@@ -33,16 +28,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
-
   return (
     <html lang="zh-CN">
       <body className={`antialiased min-h-screen bg-[var(--background)]`} suppressHydrationWarning>
-        <ClientLayout>
-          {isDev && <Inspector />}
-          {children}
-          <LoadingOverlay />
-        </ClientLayout>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );
