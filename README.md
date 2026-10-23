@@ -85,7 +85,8 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
 | 动态难度（`difficulty.ts`） | ✅ 46 项自测（20 题门槛 + 贝叶斯平滑，已接 `today.performance`） |
 | 学习效果指标（`metrics.ts`） | ✅ 80 项自测 + `/api/review/metrics` |
-| 规则离线回放（SM-2 vs FSRS） | ✅ `scripts/replay-compare.ts`，结论见 [EVALUATION.md](docs/EVALUATION.md) |
+| 规则离线回放（SM-2 vs FSRS） | ✅ `scripts/replay-compare.ts`（含校准/Brier/log-loss/真实日志回放），结论见 [EVALUATION.md](docs/EVALUATION.md) |
+| 回放纯函数自测（校准/Brier/真实解析） | ✅ 43 项（`scripts/replay-check.ts`） |
 | 日期 / 签名（`date.ts` / `token.ts`） | ✅ 22 + 29 项自测 |
 | 每日组题（`selection.ts` / `questions.ts`） | ✅ 89 项自测 |
 | today/submit 编排（`review.ts`） | ✅ 91 项自测 |
@@ -129,13 +130,14 @@ pnpm build        # 生产构建
 ```bash
 npx tsx scripts/scheduler-check.ts     # 29
 npx tsx scripts/grading-check.ts       # 28
-npx tsx scripts/difficulty-check.ts    # 20
+npx tsx scripts/difficulty-check.ts    # 46
 npx tsx scripts/date-check.ts          # 22
 npx tsx scripts/token-check.ts         # 29
 npx tsx scripts/selection-check.ts     # 89
-npx tsx scripts/review-check.ts        # 91
+npx tsx scripts/review-check.ts        # 108
 npx tsx scripts/setup-app-check.ts     # 65
 npx tsx scripts/metrics-check.ts       # 80
+npx tsx scripts/replay-check.ts         # 43
 ```
 
 端到端冒烟（起一个真实 `next start`，不调飞书/模型）：
@@ -143,7 +145,7 @@ npx tsx scripts/metrics-check.ts       # 80
 ```bash
 bash scripts/smoke-api.sh              # 75 项
 
-# 规则回放（合成学习者，不碰网络/数据库）
+# 规则回放（合成学习者；真实日志用 --practice <json>）
 npx tsx scripts/replay-compare.ts
 ```
 

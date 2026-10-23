@@ -127,27 +127,25 @@ export function newCard(day = 0): FsrsCard {
   };
 }
 
-/** 按一次作答更新卡片（返回新卡，不修改入参） */
-export function reviewCard(
+/**
+ * 按「真实间隔」更新卡片：用于回放真实日志（间隔来自历史记录，不是我们排的）。
+ * 与 reviewCard 的区别只有 elapsed 的来源；dueDay 仍然按目标保持率算，便于展示。
+ */
+export function reviewCardAtElapsed(
   card: FsrsCard,
   grade: FsrsGrade,
+  elapsedDays: number,
   day: number,
   targetRetention: number = FSRS_TARGET_RETENTION
 ): FsrsCard {
   const isFirst = card.reps === 0;
-  const elapsed = card.lastReviewDay === null ? 0 : Math.max(0, day - card.lastReviewDay);
+  const elapsed = isFirst ? 0 : Math.max(0, elapsedDays);
   const recall = isFirst ? 1 : retrievability(elapsed, card.stability);
-
   const stability = isFirst
     ? initialStability(grade)
     : nextStability(card.difficulty, card.stability, recall, grade);
-  const difficulty = isFirst
-    ? initialDifficulty(grade)
-    : nextDifficulty(card.difficulty, grade);
-
-  // 天粒度简化：Again 次日见；其余按目标保持率算间隔
+  const difficulty = isFirst ? initialDifficulty(grade) : nextDifficulty(card.difficulty, grade);
   const interval = grade === 1 ? 1 : intervalForRetention(stability, targetRetention);
-
   return {
     state: isFirst ? 1 : grade === 1 ? 3 : 2,
     stability,
@@ -156,5 +154,20 @@ export function reviewCard(
     lapses: card.lapses + (grade === 1 ? 1 : 0),
     lastReviewDay: day,
     dueDay: day + interval,
+  };
+}
+
+/** 按一次作答更新卡片（返回新卡，不修改入参） */
+export function reviewCard(
+  card: FsrsCard,
+  grade: FsrsGrade,
+  day: number,
+  targetRetention: number = FSRS_TARGET_RETENTION
+): FsrsCard {
+  const elapsed = card.lastReviewDay === null ? 0 : Math.max(0, day - card.lastReviewDay);
+  // 天粒度简化：Again 次日见；其余按目标保持率算间隔
+  return {
+    ...reviewCardAtElapsed(card, grade, elapsed, day, targetRetention),
+    lastReviewDay: day,
   };
 }

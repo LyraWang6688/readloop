@@ -34,6 +34,11 @@
 - 真实用户需要 ≥400 条复习日志才能可靠拟合 FSRS 参数；我们还没有
 - 换调度器要动状态字段（interval/ease → stability/difficulty）、做迁移与 A/B，成本不低
 
+**补充（同日）**：回放还产出**校准度 / Brier / log-loss / 单位复习保持率**，并已支持
+`--practice` 回放真实 `practice_events`（需要 `复习间隔` 字段）。合成数据下 SM-2 的 Brier 更低，
+是因为 SM-2 的预测由「上次间隔」反推、更贴合我们设定的合成真值；**不能据此认为 SM-2 概率模型更好**，
+真实结论必须等真实日志。实现见 `src/lib/replay.ts`（校准/Brier/真实回放）与 `scripts/replay-check.ts`（43 项断言）。
+
 **切换前必须满足**
 
 1. 真实日志积累到可优化量级，且用真实日志重跑回放
