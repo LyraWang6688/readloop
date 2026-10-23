@@ -2,7 +2,7 @@
 
 `extension/` 目录是一个静态 Chrome/Edge Manifest V3 插件。
 它不直接连接 Supabase，也不包含 AI Key、数据库连接串或数据库密码。
-插件只调用现有 ReadInsight Next.js API。
+插件只调用现有 ReadLoop Next.js API。
 
 ## 本地加载
 
@@ -46,7 +46,7 @@ local-dev-user
 
 1. 打开任意英文网页。
 2. 选中一段英文。
-3. 右键选择 "用 ReadInsight 练习这段英文"，或点击插件图标。
+3. 右键选择 "用 ReadLoop 练习这段英文"，或点击插件图标。
 4. 在侧边栏输入自己的中文翻译。
 5. 点击 "开始 AI 对比诊断"。
 6. 查看 AI 参考翻译、诊断结果和可沉淀知识点。

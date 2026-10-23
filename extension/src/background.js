@@ -6,7 +6,7 @@ let activeTabId = null;
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: CONTEXT_MENU_ID,
-    title: "用 ReadInsight 练习这段英文",
+    title: "用 ReadLoop 练习这段英文",
     contexts: ["selection"],
   });
 
