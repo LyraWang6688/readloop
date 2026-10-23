@@ -1,59 +1,61 @@
 // ============================================================
 // LLM 调用封装
-// 使用 coze-coding-dev-sdk 内置 SDK
+//
+// 模型由用户自带（BYOK），每次调用显式传入 ModelConfig。
+// 服务端不持有任何模型 Key，也不依赖特定厂商 SDK。
+// 接口走 OpenAI 兼容的 /chat/completions。
 // ============================================================
 
-import { LLMClient, Config } from "coze-coding-dev-sdk";
-import type {
-  DiagnosisAnalysis,
-  KnowledgePoint,
-  PracticeQuestion,
-} from "@/types";
-
-// ============================================================
-// 客户端初始化
-// ============================================================
-
-// 创建全局 LLM 客户端
-const getClient = () => new LLMClient(new Config());
-
-// ============================================================
-// 通用调用函数
-// ============================================================
+import type { ModelConfig } from "./model";
+import type { DiagnosisAnalysis, KnowledgePoint } from "@/types";
 
 interface Message {
   role: "system" | "user" | "assistant";
   content: string;
 }
 
-interface LLMResponse {
+export interface LLMResponse {
   content: string;
 }
 
-// 流式调用
-export async function* streamLLM(
-  messages: Message[],
-  temperature: number = 0.7
-): AsyncGenerator<string> {
-  const client = getClient();
+const REQUEST_TIMEOUT_MS = 120_000;
 
-  for await (const chunk of client.stream(messages, { temperature })) {
-    if (chunk.content) {
-      yield chunk.content.toString();
-    }
-  }
-}
-
+/**
+ * 调一次 OpenAI 兼容的 chat completions。
+ * 失败时抛出带状态码的错误——调用方必须如实上报，不允许编造结果。
+ */
 export async function invokeLLM(
   messages: Message[],
+  model: ModelConfig,
   temperature: number = 0.7
 ): Promise<LLMResponse> {
-  const client = getClient();
+  const response = await fetch(`${model.base_url}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${model.api_key}`,
+    },
+    body: JSON.stringify({
+      model: model.model,
+      messages,
+      temperature,
+    }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
 
-  const result = await client.invoke(messages, { temperature });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(
+      `模型调用失败：HTTP ${response.status}${detail ? ` - ${detail.slice(0, 200)}` : ""}`
+    );
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
 
   return {
-    content: result.content?.toString() || "",
+    content: data.choices?.[0]?.message?.content?.toString() ?? "",
   };
 }
 
@@ -152,85 +154,7 @@ const SYSTEM_PROMPTS = {
     "difficulty": "cet4|cet6|toefl|ielts|advanced"
   }
 ]`,
-
-
-  generateQuestions: `你是一位英文练习题设计师，为学习者创建高质量的练习题。
-
-题型说明：
-1. 选词填空：给出带空格的句子，提供选项
-2. 短语配对：左侧短语，右侧含义，正确匹配
-3. 理解判断：判断陈述是否与原文相符
-
-出题原则：
-1. 考察理解而非记忆：选项要放在语境中判断
-2. 干扰项合理：干扰项要与正确项有一定关联
-3. 解析详尽：解释为什么选这个
-4. 回到原文：题目要能关联到学习的语境
-
-输出格式（JSON）：
-{
-  "questions": [
-    {
-      "type": "fill_blank|match|judge",
-      "question": "题目内容",
-      "options": ["A", "B", "C", "D"], // 选词填空
-      "pairs": [{"phrase": "", "meaning": ""}], // 配对题
-      "correctAnswer": "正确答案|true|false",
-      "explanation": "详细解析",
-      "commonMistake": "常见错误（如有）"
-    }
-  ],
-  "totalCount": 5,
-  "estimatedTime": "约5分钟"
-}`,
 };
-
-
-
-// 生成练习题
-export async function generatePracticeQuestions(
-  knowledgePoints: Array<{ content: string; meaning: string; type: string }>,
-  count: number = 5
-): Promise<{ questions: PracticeQuestion[]; totalCount: number; estimatedTime: string }> {
-  const pointsText = knowledgePoints
-    .map((p, i) => `${i + 1}. [${p.type}] ${p.content} - ${p.meaning}`)
-    .join("\n");
-
-  const response = await invokeLLM(
-    [
-      { role: "system", content: SYSTEM_PROMPTS.generateQuestions },
-      {
-        role: "user",
-        content: `请基于以下知识点生成 ${count} 道练习题：
-
-${pointsText}
-
-每种题型适当搭配，题目要结合语境。`,
-      },
-    ],
-    0.7
-  );
-
-  try {
-    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const result = JSON.parse(jsonMatch[0]);
-      return {
-        questions: result.questions || [],
-        totalCount: result.totalCount || count,
-        estimatedTime: result.estimatedTime || `约${count}分钟`,
-      };
-    }
-  } catch {
-    // 解析失败
-  }
-
-  return {
-    questions: [],
-    totalCount: 0,
-    estimatedTime: "",
-  };
-}
 
 // ============================================================
 // 完整的诊断流程（翻译 + 诊断 + 知识点提取）
@@ -242,10 +166,10 @@ export interface FullDiagnosisResult {
   knowledgePoints: Omit<KnowledgePoint, "id" | "createdAt">[];
 }
 
-// 步骤1+2：翻译 + 诊断分析
 async function translateAndDiagnose(
   originalParagraph: string,
-  userTranslation: string
+  userTranslation: string,
+  model: ModelConfig
 ): Promise<{ aiTranslation: string; analysis: DiagnosisAnalysis }> {
   const response = await invokeLLM(
     [
@@ -267,6 +191,7 @@ ${userTranslation}
 请输出 JSON 格式的结果，包含 AI 翻译和诊断分析。`,
       },
     ],
+    model,
     0.7
   );
 
@@ -284,7 +209,7 @@ ${userTranslation}
       };
     }
   } catch {
-    // 解析失败
+    // 模型返回的不是合法 JSON：按空结果处理，由调用方决定如何提示
   }
 
   return {
@@ -293,7 +218,6 @@ ${userTranslation}
   };
 }
 
-// 步骤3：基于诊断结果提取知识点
 async function extractKnowledgeFromDiagnosis(
   originalParagraph: string,
   userTranslation: string,
@@ -301,7 +225,7 @@ async function extractKnowledgeFromDiagnosis(
   analysis: DiagnosisAnalysis,
   sourceParagraphId: string,
   sourceArticleId: string,
-  sourceArticleTitle: string
+  model: ModelConfig
 ): Promise<Omit<KnowledgePoint, "id" | "createdAt">[]> {
   const response = await invokeLLM(
     [
@@ -331,6 +255,7 @@ ${JSON.stringify(analysis, null, 2)}
 请输出 JSON 数组格式的知识点。`,
       },
     ],
+    model,
     0.5
   );
 
@@ -338,28 +263,30 @@ ${JSON.stringify(analysis, null, 2)}
     const jsonMatch = response.content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const points = JSON.parse(jsonMatch[0]);
-      return points.map((p: {
-        type: string;
-        content: string;
-        meaning: string;
-        explanation?: string;
-        difficulty: string;
-      }) => ({
-        type: p.type as KnowledgePoint["type"],
-        content: p.content,
-        meaning: p.meaning,
-        explanation: p.explanation || "",
-        difficulty: p.difficulty as KnowledgePoint["difficulty"],
-        example: originalParagraph,
-        sourceParagraphId,
-        sourceArticleId,
-        sourceArticleTitle,
-        masterStatus: "learning" as const,
-        reviewCount: 0,
-      }));
+      return points.map(
+        (p: {
+          type: string;
+          content: string;
+          meaning: string;
+          explanation?: string;
+          difficulty: string;
+        }) => ({
+          type: p.type as KnowledgePoint["type"],
+          content: p.content,
+          meaning: p.meaning,
+          explanation: p.explanation || "",
+          difficulty: p.difficulty as KnowledgePoint["difficulty"],
+          example: originalParagraph,
+          sourceParagraphId,
+          sourceArticleId,
+          sourceArticleTitle: "",
+          masterStatus: "learning" as const,
+          reviewCount: 0,
+        })
+      );
     }
   } catch {
-    // 解析失败
+    // 解析失败按无知识点处理
   }
 
   return [];
@@ -370,15 +297,16 @@ export async function performFullDiagnosis(
   userTranslation: string,
   sourceParagraphId: string,
   sourceArticleId: string,
-  sourceArticleTitle: string
+  model: ModelConfig
 ): Promise<FullDiagnosisResult> {
-  // 步骤1+2：翻译 + 诊断分析（一次调用）
+  // 步骤 1+2：翻译 + 诊断分析（一次调用）
   const { aiTranslation, analysis } = await translateAndDiagnose(
     originalParagraph,
-    userTranslation
+    userTranslation,
+    model
   );
 
-  // 步骤3：基于诊断结果提取知识点
+  // 步骤 3：基于诊断结果提取原子级知识点
   const knowledgePoints = await extractKnowledgeFromDiagnosis(
     originalParagraph,
     userTranslation,
@@ -386,12 +314,8 @@ export async function performFullDiagnosis(
     analysis,
     sourceParagraphId,
     sourceArticleId,
-    sourceArticleTitle
+    model
   );
 
-  return {
-    aiTranslation,
-    analysis,
-    knowledgePoints,
-  };
+  return { aiTranslation, analysis, knowledgePoints };
 }
