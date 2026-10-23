@@ -26,12 +26,14 @@
 bash scripts/deploy-server.sh
 ```
 
-它会：本地 tar 流同步源码到 `/opt/readloop`（不动服务器 `.env`）→ 服务器 `docker compose up -d --build`
-→ 轮询 `/api/health` 直到通过。
+流程：本地必须 commit 干净 → `git push origin main` → 服务器 `/opt/readloop` 执行 `git pull --ff-only`
+→ 校验服务器 HEAD 与本机一致 → `docker compose up -d --build` → 轮询 `/api/health` 直到通过。
 
-> **为什么不是服务器 `git pull`**：实测服务器直连 `github.com:443` 经常超时（`git clone` 130s 超时），
-> 而本地 `git push` 正常。所以部署用 SSH 同步源码；GitHub 仍是主仓库。
-> 若以后给服务器配了 readloop 仓库的 deploy key，可改回 `git pull`。
+- `/opt/readloop` 就是 GitHub 的 **git clone**（`origin = https://github.com/LyraWang6688/readloop.git`），
+  服务器上可以直接 `git log` / `git diff` 核对版本。
+- 服务器直连 GitHub 偶发超时；脚本里 `git pull` 失败会自动改用镜像
+  `https://ghfast.top/https://github.com/...`（已配为 `mirror` remote），再失败才报错退出。
+- 已经 push 过、只想重建时：`bash scripts/deploy-server.sh --skip-push`。
 
 > **Docker Hub 拉取慢**：首次构建从 Docker Hub 拉 `node:22-bookworm-slim` 只有 ~0.4MB/s。
 > 解决：从国内镜像源拉一次再打 tag（`docker pull docker.1ms.run/library/node:22-bookworm-slim` +
@@ -103,10 +105,14 @@ openssl rand -hex 32   # QUESTION_ID_SECRET
 # 1. 服务器上准备目录
 sudo mkdir -p /opt/readloop && sudo chown -R ubuntu:ubuntu /opt/readloop
 
-# 2. 同步源码（本地执行；服务器直连 GitHub 不稳）
-COPYFILE_DISABLE=1 tar czf - --exclude='.git' --exclude='node_modules' --exclude='.next' \
-  --exclude='.pnpm-store' --exclude='.env' --exclude='.env.local' --exclude='HANDOFF.md' . \
-  | ssh ubuntu@43.143.239.42 'tar xzf - -C /opt/readloop'
+# 2. 从 GitHub 克隆（仓库是 public，服务器可直接 HTTPS clone）
+sudo mkdir -p /opt/readloop && sudo chown ubuntu:ubuntu /opt/readloop
+git clone https://github.com/LyraWang6688/readloop.git /opt/readloop
+
+# 2.1 配镜像兜底（直连 GitHub 偶发超时）
+cd /opt/readloop
+git remote add mirror https://ghfast.top/https://github.com/LyraWang6688/readloop.git
+git config pull.ff only
 
 # 3. 写环境变量（服务器上；LICENSE_SECRET / QUESTION_ID_SECRET 用 openssl rand -hex 32 生成）
 cd /opt/readloop && vim .env && chmod 600 .env
@@ -146,7 +152,7 @@ server {
 }
 ```
 
-日常发布：`bash scripts/deploy-server.sh`（源码同步 + 重建 + 健康检查）。
+日常发布：`bash scripts/deploy-server.sh`（push → 服务器 git pull → 重建 → 健康检查）。
 
 ## 三、部署前必须解决的卡点
 

@@ -79,14 +79,15 @@ LICENSE_SECRET=你的密钥 npx tsx scripts/license-gen.ts 10
 # 端到端接口冒烟（起真实 next start，不调飞书/模型）
 bash scripts/smoke-api.sh
 
-# 发布到生产（SSH 同步源码 + Docker 重建 + 健康检查）
+# 发布到生产（git push → 服务器 git pull → Docker 重建 → 健康检查）
 bash scripts/deploy-server.sh
 ```
 
 ## 环境变量与线上服务
 
 - 本地模板见 [.env.example](.env.example)；**没有 `DATABASE_URL`**，模型配置由请求体携带（BYOK）。
-- 生产：<https://readinsight.bamamei.online>（`/api/health` 可查状态），服务器 `/opt/readloop/.env` 存两个签名密钥。
+- 生产：<https://readinsight.bamamei.online>（`/api/health` 可查状态）；服务器 `/opt/readloop` 是 GitHub 的 git clone，`.env` 存两个签名密钥。
+- 发布：`bash scripts/deploy-server.sh`（会先要求 commit 干净 → push → 服务器 pull → 重建）。
 - **授权码必须用生产同一个 `LICENSE_SECRET` 生成**（`scripts/license-gen.ts`），换密钥会让已发出的码全部失效。
 
 ## 开发注意事项
