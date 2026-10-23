@@ -2,7 +2,7 @@
 
 > 状态：当前有效（2026-10-23 确立）
 > 命名：项目由 ReadInsight 更名为 **ReadLoop**，一句话定位是「读的时候暴露短板，AI 助手按时帮你复习」。
-> 仓库 / 包名 / Chrome 插件的实际改名尚未执行，见 [DECISIONS.md](./DECISIONS.md)。
+> 改名已执行：GitHub 仓库为 `LyraWang6688/readloop`，`package.json` 与插件显示名均已同步。
 > 复习与出题的具体算法见 [REVIEW_RULES.md](./REVIEW_RULES.md)。
 > 产品定位的历史沿革见 [PRODUCT_POSITIONING.md](./PRODUCT_POSITIONING.md)。
 

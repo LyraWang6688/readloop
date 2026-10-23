@@ -256,9 +256,9 @@
 
 **影响**
 
-- 仓库名建议 `readloop`（npm 同名可用，GitHub 无知名占用）。
+- 仓库名 `readloop`（npm 同名可用，GitHub 无知名占用）。
 - `readloop.com / .app / .io` 均被占用，MVP 阶段先用子域名。
-- 仓库 / 包名 / 插件的实际改名尚未执行；改造时应一次性完成，避免两套名称并存。
+- **改名已执行（2026-10-23）**：GitHub 仓库 `LyraWang6688/readloop`、`package.json`、插件显示名均已切换；旧地址由 GitHub 301 重定向。
 
 **遗留**
 

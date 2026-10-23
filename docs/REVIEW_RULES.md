@@ -4,7 +4,7 @@
 > 最近更新：2026-10-23
 > 上位文档：[ARCHITECTURE.md](./ARCHITECTURE.md)
 > 理论依据：[MEMORY_SCIENCE.md](./MEMORY_SCIENCE.md)（每条规则的出处与现存偏差）
-> 命名：项目更名为 ReadLoop（实际改名尚未执行）
+> 命名：项目更名为 ReadLoop（仓库地址 `LyraWang6688/readloop`）
 
 本文件定义**不依赖大模型**的那部分逻辑：答题档位、状态迁移、间隔计算、每日组题、幂等约束。
 
