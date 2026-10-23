@@ -27,6 +27,17 @@ extension/
         └── styles.css
 ```
 
+## 下载安装包（推荐）
+
+从 GitHub Releases 下载对应版本的 `readloop-extension-<version>.zip`：
+
+👉 <https://github.com/LyraWang6688/readloop/releases>
+
+解压后在 `chrome://extensions` → 打开 Developer mode → 「Load unpacked」→ 选解压出来的目录。
+
+> 自己打包：`bash scripts/pack-extension.sh`（产物在 `dist/`，不提交仓库）。
+> 尚未上架 Chrome Web Store；上架前需要完成真实凭证联调与商店素材准备，见 `docs/CHROME_WEB_STORE_CHECKLIST.md`。
+
 ## 本地安装
 
 1. 打开 Chrome，访问 `chrome://extensions`。

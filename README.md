@@ -91,6 +91,12 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 部署 | ✅ 已上线 <https://readinsight.bamamei.online>（`bash scripts/deploy-server.sh`） |
 | 真机验证（真实飞书链路 / 插件配准 / 豆包宿主） | ⏳ 待做 |
 
+## Chrome 插件
+
+- 下载：<https://github.com/LyraWang6688/readloop/releases>（`readloop-extension-<version>.zip`，解压后 Load unpacked）
+- 源码：`extension/`，当前版本 **0.3.2**
+- 自己打包：`bash scripts/pack-extension.sh`
+
 ## 线上服务
 
 - 地址：<https://readinsight.bamamei.online>
