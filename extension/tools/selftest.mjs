@@ -747,11 +747,25 @@ await test("content script：回复选区查询、划词上报、空选区/重�
   assert.equal(sentMessages[1].payload.selectedText, "second selection");
 });
 
-console.log("\n— background service worker（vm 模拟 chrome.*） —");
+console.log("\n— background service worker（vm 模拟 chrome.*，选区存 storage.session） —");
 
-await test("background：右键菜单 / 打开侧边栏 / 选区消息路由", async () => {
-  const listeners = { installed: [], startup: [], message: [], menu: [], action: [], activated: [], removed: [] };
+await test("background：选区持久化 / 右键菜单 / 消息路由（SW 重启不丢）", async () => {
+  const listeners = { installed: [], startup: [], message: [], menu: [], activated: [], removed: [] };
   const calls = { menusCreate: [], removeAll: 0, panelOpen: [], panelBehavior: [], broadcasts: [], tabMessages: [] };
+  const sessionState = new Map();
+
+  const readSession = (keys) => {
+    const out = {};
+    if (typeof keys === "string") {
+      if (sessionState.has(keys)) out[keys] = sessionState.get(keys);
+      return out;
+    }
+    const list = Array.isArray(keys) ? keys : Object.keys(keys || {});
+    for (const key of list) {
+      if (sessionState.has(key)) out[key] = sessionState.get(key);
+    }
+    return out;
+  };
 
   const backgroundChrome = {
     runtime: {
@@ -777,7 +791,20 @@ await test("background：右键菜单 / 打开侧边栏 / 选区消息路由", a
         });
       },
     },
-    action: { onClicked: { addListener(fn) { listeners.action.push(fn); } } },
+    storage: {
+      session: {
+        get: (keys) => Promise.resolve(readSession(keys)),
+        set: (patch) => {
+          for (const [key, value] of Object.entries(patch)) sessionState.set(key, value);
+          return Promise.resolve();
+        },
+        remove: (keys) => {
+          const list = Array.isArray(keys) ? keys : [keys];
+          for (const key of list) sessionState.delete(key);
+          return Promise.resolve();
+        },
+      },
+    },
     sidePanel: {
       setPanelBehavior(behavior) { calls.panelBehavior.push(behavior); return Promise.resolve(); },
       open(options) { calls.panelOpen.push(options); return Promise.resolve(); },
@@ -802,7 +829,7 @@ await test("background：右键菜单 / 打开侧边栏 / 选区消息路由", a
       if (returned === false) {
         resolveResponse(null);
       }
-      setTimeout(() => resolveResponse(null), 100);
+      setTimeout(() => resolveResponse(null), 500);
     });
 
   listeners.installed.forEach((fn) => fn());
@@ -811,9 +838,15 @@ await test("background：右键菜单 / 打开侧边栏 / 选区消息路由", a
   assert.equal(calls.menusCreate[0].contexts[0], "selection");
   assert.deepEqual(json(calls.panelBehavior[0]), { openPanelOnActionClick: true });
 
-  const emptyResponse = json(await dispatch({ type: "READINSIGHT_GET_ACTIVE_SELECTION" }));
-  assert.equal(emptyResponse.selection.selectedText, "", "没有选区时返回空选区");
+  // ① SW 里没有任何缓存时，GET 会向 content script 补拉一次（点图标打开面板的场景）
+  const firstResponse = json(await dispatch({ type: "READINSIGHT_GET_ACTIVE_SELECTION" }));
+  assert.equal(firstResponse.selection.selectedText, "tab selection", "无缓存时从页面补拉选区");
+  assert.equal(calls.tabMessages.at(-1).tabId, 7);
+  assert.equal(calls.tabMessages.at(-1).message.type, "READINSIGHT_GET_SELECTION");
+  assert.equal(sessionState.get("activeTabId"), 7, "activeTabId 写进 storage.session");
+  assert.equal(sessionState.get("selection:7").selectedText, "tab selection", "选区写进 storage.session");
 
+  // ② content script 上报选区：写入 storage.session 并广播
   const changedResponse = json(
     await dispatch(
       { type: "READINSIGHT_SELECTION_CHANGED", payload: { selectedText: "chosen text", pageUrl: "https://example.com/a", pageTitle: "A", capturedAt: 1 } },
@@ -823,32 +856,46 @@ await test("background：右键菜单 / 打开侧边栏 / 选区消息路由", a
   assert.deepEqual(changedResponse, { ok: true });
   assert.equal(calls.broadcasts.at(-1).type, "READINSIGHT_SELECTION_UPDATED");
   assert.equal(calls.broadcasts.at(-1).payload.selectedText, "chosen text");
-
+  assert.equal(sessionState.get("selection:7").selectedText, "chosen text");
   const storedResponse = json(await dispatch({ type: "READINSIGHT_GET_ACTIVE_SELECTION" }));
-  assert.equal(storedResponse.selection.selectedText, "chosen text");
+  assert.equal(storedResponse.selection.selectedText, "chosen text", "有缓存时不再打扰页面");
 
+  // ③ 右键菜单：先记选区 → 开面板 → 再从页面补权威 URL/标题
   await listeners.menu[0](
     { menuItemId: "readloop-practice-selection", selectionText: "menu selection" },
     { id: 9, url: "https://example.com/b", title: "B" }
   );
+  await sleep(20);
   assert.equal(calls.panelOpen.at(-1).tabId, 9, "右键菜单应打开侧边栏");
+  assert.equal(calls.tabMessages.at(-1).tabId, 9, "打开面板后向该 tab 补拉一次选区");
+  assert.equal(sessionState.get("activeTabId"), 9);
   assert.equal(calls.menusCreate[0].title, "用 ReadLoop 练习这段英文");
 
+  // ④ 切 tab：广播该 tab 的选区
   listeners.activated.forEach((fn) => fn({ tabId: 9 }));
-  assert.equal(calls.broadcasts.at(-1).payload.selectedText, "menu selection", "切换 tab 时广播该 tab 的选区");
+  await sleep(20);
+  assert.equal(calls.broadcasts.at(-1).payload.selectedText, "tab selection", "切换 tab 时广播该 tab 的选区");
   const menuSelection = json(await dispatch({ type: "READINSIGHT_GET_ACTIVE_SELECTION" }));
-  assert.equal(menuSelection.selection.selectedText, "menu selection");
+  assert.equal(menuSelection.selection.selectedText, "tab selection");
 
+  // ⑤ 手动刷新：重新向页面要
   const refreshed = json(await dispatch({ type: "READINSIGHT_REFRESH_SELECTION" }));
   assert.equal(calls.tabMessages.at(-1).message.type, "READINSIGHT_GET_SELECTION");
   assert.equal(refreshed.selection.selectedText, "tab selection");
 
-  await listeners.action[0]({ id: 7 });
-  assert.equal(calls.panelOpen.at(-1).tabId, 7, "点图标应打开侧边栏");
-
+  // ⑥ 关闭 tab：清掉该 tab 的选区与 activeTabId，回落到当前 tab
   listeners.removed.forEach((fn) => fn(9));
+  await sleep(20);
+  assert.equal(sessionState.get("selection:9"), undefined, "关闭 tab 时清掉该 tab 的选区");
+  assert.equal(sessionState.get("activeTabId"), undefined, "关闭激活 tab 时清掉 activeTabId");
   const afterClose = json(await dispatch({ type: "READINSIGHT_GET_ACTIVE_SELECTION" }));
-  assert.equal(afterClose.selection.selectedText, "tab selection");
+  assert.equal(afterClose.selection.selectedText, "chosen text", "回落到当前 tab 之前的选区");
+
+  // ⑦ SW 重启后（内存清空）仍能从 storage.session 读到选区
+  sessionState.delete("selection:7");
+  sessionState.set("selection:7", { selectedText: "survives restart", pageUrl: "https://example.com/a", pageTitle: "A", capturedAt: 2 });
+  const afterRestart = json(await dispatch({ type: "READINSIGHT_GET_ACTIVE_SELECTION" }));
+  assert.equal(afterRestart.selection.selectedText, "survives restart", "SW 重启后从 storage.session 恢复选区");
 });
 
 console.log(`\n${"─".repeat(48)}`);

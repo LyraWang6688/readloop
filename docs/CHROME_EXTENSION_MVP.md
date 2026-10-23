@@ -41,6 +41,16 @@
    （按「归一化内容」先查后写：命中则暴露次数/待练次数 +1、更新最近暴露；未命中则按 schema 默认值新建）。
 6. 打开用户自己的飞书 Base 核对两张表。
 
+## MV3 生命周期要点（2026-10-23 按官方 samples 对齐）
+
+- 选区状态存 `chrome.storage.session`（`selection:<tabId>` + `activeTabId`），**不放 SW 内存**；
+  侧边栏订阅 `storage.session.onChanged`，SW 被回收后重新打开面板仍能恢复选区。
+- SW 监听器顶层同步注册、回调内异步；无顶层 await、无长定时器。
+- 图标点击用官方推荐的 `sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` 打开面板；
+  面板加载时主动向 SW 要当前选区（SW 无缓存时会向 content script 补拉）。
+- 右键菜单打开面板后，再用 activeTab 从 content script 补一次权威 URL/标题。
+- 不申请 `tabs` 权限（用不到）；`<all_urls>` 只用于声明式注入 content script，只读用户划选的文本。
+
 ## 链路结构
 
 ```text

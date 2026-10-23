@@ -148,6 +148,17 @@ function bindEvents() {
       applySelection(message.payload);
     }
   });
+
+  // MV3 service worker 可能被回收，广播不保证送达；选区以 chrome.storage.session 为准。
+  // 订阅 storage 变化，面板重开/SW 重启后都能恢复当前选区。
+  if (chrome.storage?.session?.onChanged) {
+    chrome.storage.session.onChanged.addListener((changes) => {
+      const keys = Object.keys(changes);
+      if (keys.includes("activeTabId") || keys.some((key) => key.startsWith("selection:"))) {
+        void refreshSelection();
+      }
+    });
+  }
 }
 
 // ---------- 设置 ----------

@@ -113,6 +113,17 @@ extension/
 | 配对 5 分钟没反应 | 确认宿主已提交这个 6 位码（`POST /api/setup/app/pair`），重新生成配对码再试 |
 | 飞书接口限流 | 一次入库会写多条记录，稍等几秒再点 |
 
+## 状态与持久化（MV3 生命周期）
+
+- **选区状态存 `chrome.storage.session`**（`selection:<tabId>` + `activeTabId`），不放 service worker 内存：
+  service worker 空闲 ~30 秒会被回收，内存态会丢——这是官方 `sample.sidepanel-dictionary` 的做法。
+  侧边栏订阅 `chrome.storage.session.onChanged`，面板重开 / SW 重启都能恢复当前选区。
+- **service worker 不保存任何业务状态**：监听器全部顶层同步注册，回调里才做异步；没有顶层 await，不用长定时器。
+- **存储分仓**：`host_token` / 模型 `api_key` / 飞书 `app_secret` 只进 `chrome.storage.local`；
+  服务地址、App ID、app_token、模型名等非密钥配置进 `chrome.storage.sync`。
+- 右键菜单路径在打开面板后，会用右键授予的 `activeTab` 再从 content script 拉一次选区，
+  补上 `tab.url` 在非 host_permissions 页面拿不到 URL/标题的问题。
+
 ## 开发自查
 
 ```bash
