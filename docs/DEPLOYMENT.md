@@ -1,9 +1,43 @@
 # 部署与技术环境
 
-> 状态：当前有效
-> 最近更新：2026-10-23（接口与插件实现完成，部署待执行）
+> 状态：**已上线**（2026-10-23）：<https://readinsight.bamamei.online>
+> 最近更新：2026-10-23
 > 数据来源：[我的项目与部署台账](https://my.feishu.cn/base/NeujbbOfcaPEvMsPIxscaJImn9d?table=tblgTMnvrNSSOLsD)（2026-10-19 体检）
 > 上位文档：[ARCHITECTURE.md](./ARCHITECTURE.md)、[API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md)
+
+---
+
+## 〇、线上现状（2026-10-23 实测）
+
+| 项 | 值 |
+|---|---|
+| 域名 | `https://readinsight.bamamei.online`（HTTP 301 → HTTPS） |
+| 容器 | `readloop-service`（Docker，`restart: unless-stopped`，单副本） |
+| 监听 | `127.0.0.1:3000`（只对 Nginx 暴露） |
+| Nginx | `/etc/nginx/sites-available/readloop` → `proxy_pass 127.0.0.1:3000` |
+| 证书 | Let's Encrypt，`readinsight.bamamei.online`，到期 2027-01-21；自动续期已就绪（`renew --dry-run` 通过） |
+| 目录 | `/opt/readloop`（源码 + `.env`，`.env` 权限 600） |
+| 验证 | `GET /api/health` → `{"status":"ok"}`；远程接口冒烟 54 项全过（`scripts/smoke-api.ts`） |
+| 兼容性 | 同机其它站点（meeting / api / hm）未受影响 |
+
+**更新发布**（改完代码后一条命令）：
+
+```bash
+bash scripts/deploy-server.sh
+```
+
+它会：本地 tar 流同步源码到 `/opt/readloop`（不动服务器 `.env`）→ 服务器 `docker compose up -d --build`
+→ 轮询 `/api/health` 直到通过。
+
+> **为什么不是服务器 `git pull`**：实测服务器直连 `github.com:443` 经常超时（`git clone` 130s 超时），
+> 而本地 `git push` 正常。所以部署用 SSH 同步源码；GitHub 仍是主仓库。
+> 若以后给服务器配了 readloop 仓库的 deploy key，可改回 `git pull`。
+
+> **Docker Hub 拉取慢**：首次构建从 Docker Hub 拉 `node:22-bookworm-slim` 只有 ~0.4MB/s。
+> 解决：从国内镜像源拉一次再打 tag（`docker pull docker.1ms.run/library/node:22-bookworm-slim` +
+> `docker tag … node:22-bookworm-slim`），或在服务器 `.env` 里设
+> `NODE_IMAGE=docker.1ms.run/library/node:22-bookworm-slim`（compose 会作为 build-arg 传进去）。
+> Dockerfile 里 `npm i -g pnpm` 已固定走 npmmirror。
 
 ---
 
@@ -15,11 +49,11 @@
 |---|---|---|---|---|
 | 会议分析系统 | 🟢 运行中 | 3011 | Docker | meeting.bamamei.online |
 | box2bitable | 🟢 运行中 | 5000 | pm2 | api / hm.bamamei.online |
-| ReadLoop | ⏳ 待部署 | 3000 | Docker | readinsight.bamamei.online |
+| ReadLoop | 🟢 运行中（2026-10-23 上线） | 3000 | Docker | readinsight.bamamei.online |
 | 阅读分析 Web 应用（旧 ReadInsight） | ⚫ 2026-10-04 已删除 | 3000 | Docker | readinsight.bamamei.online |
 
 **旧部署已被完整清理**：容器停止、`/opt/readinsight` 删除、Nginx 站点摘除、镜像清理。
-所以 `readinsight.bamamei.online` 打不开不是故障，是主动下线。**端口 3000 现在空闲。**
+所以历史上 `readinsight.bamamei.online` 打不开不是故障，是主动下线。**端口 3000 现由 ReadLoop 使用。**
 
 ---
 
@@ -63,38 +97,56 @@ openssl rand -hex 32   # LICENSE_SECRET
 openssl rand -hex 32   # QUESTION_ID_SECRET
 ```
 
-### 部署步骤
+### 首次部署步骤（已完成，留档）
 
 ```bash
-# 0. 本地推代码后，服务器上
-mkdir -p /opt/readloop && cd /opt/readloop
-git clone git@github.com:LyraWang6688/readloop.git .
+# 1. 服务器上准备目录
+sudo mkdir -p /opt/readloop && sudo chown -R ubuntu:ubuntu /opt/readloop
 
-# 1. 写环境变量（见上表）
-cp .env.example .env && vim .env
+# 2. 同步源码（本地执行；服务器直连 GitHub 不稳）
+COPYFILE_DISABLE=1 tar czf - --exclude='.git' --exclude='node_modules' --exclude='.next' \
+  --exclude='.pnpm-store' --exclude='.env' --exclude='.env.local' --exclude='HANDOFF.md' . \
+  | ssh ubuntu@43.143.239.42 'tar xzf - -C /opt/readloop'
 
-# 2. 构建并启动（Dockerfile 用 standalone 产物）
+# 3. 写环境变量（服务器上；LICENSE_SECRET / QUESTION_ID_SECRET 用 openssl rand -hex 32 生成）
+cd /opt/readloop && vim .env && chmod 600 .env
+
+# 4. 构建并启动（单副本）
 docker compose up -d --build
-docker compose logs -f readloop
 
-# 3. Nginx 站点：/etc/nginx/sites-available/readloop
-#    server_name readinsight.bamamei.online;
-#    location / { proxy_pass http://127.0.0.1:3000; proxy_set_header Host $host; }
-#    ln -s /etc/nginx/sites-available/readloop /etc/nginx/sites-enabled/ && nginx -t && systemctl reload nginx
+# 5. Nginx 站点：/etc/nginx/sites-available/readloop（见下），enable 后 reload
+sudo nginx -t && sudo systemctl reload nginx
 
-# 4. 证书（现有证书不含新域名，必须重新签）
-certbot --nginx -d readinsight.bamamei.online
+# 6. 证书
+sudo certbot --nginx -d readinsight.bamamei.online --non-interactive --agree-tos --redirect
 
-# 5. 验证
-curl -s -X POST https://readinsight.bamamei.online/api/license/activate \
-  -H 'Content-Type: application/json' -d '{"license":"AAAAAAAA"}'
-# 期望：400/401 的业务错误（说明服务起来了、信封正确），不是 502/无法连接
+# 7. 验证
+curl -s https://readinsight.bamamei.online/api/health
 ```
 
-> Dockerfile / docker-compose 已按 standalone 产物改写，但**本地沙箱没有 Docker，未实际构建验证**——
-> 首次部署若构建失败，优先看 `pnpm install --frozen-lockfile` 与 `.next/standalone` 是否生成。
+Nginx 站点内容（`/etc/nginx/sites-available/readloop`）：
 
----
+```nginx
+server {
+    # ReadLoop 后端服务（Docker readloop-service，Next.js standalone，127.0.0.1:3000）
+    # 调用方是 Chrome 插件与 AI 宿主（任意 IP），不做白名单；靠 host_token 鉴权。
+    server_name readinsight.bamamei.online;
+
+    client_max_body_size 2m;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}
+```
+
+日常发布：`bash scripts/deploy-server.sh`（源码同步 + 重建 + 健康检查）。
 
 ## 三、部署前必须解决的卡点
 

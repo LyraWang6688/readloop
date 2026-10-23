@@ -5,6 +5,9 @@ services:
   readloop:
     build:
       context: .
+      args:
+        # 国内服务器可在 .env 里设 NODE_IMAGE=docker.1ms.run/library/node:22-bookworm-slim
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm-slim}
     image: readloop-service:latest
     container_name: readloop-service
     restart: unless-stopped

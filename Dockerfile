@@ -3,12 +3,16 @@
 # 只跑一个 Node 进程：/api/setup/app/* 的创建会话存在进程内存里（见 docs/API_IMPLEMENTATION.md），
 # 所以不能横向扩多副本，也不适合 serverless。单容器即可，重启会丢未完成的创建会话（可接受）。
 
-FROM node:22-bookworm-slim AS base
+# 基础镜像默认用 Docker Hub；国内服务器拉取慢时用 build-arg 换成镜像源，例如
+#   docker compose build --build-arg NODE_IMAGE=docker.1ms.run/library/node:22-bookworm-slim
+ARG NODE_IMAGE=node:22-bookworm-slim
+
+FROM ${NODE_IMAGE} AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-RUN npm install -g pnpm@11.0.6
+RUN npm install -g pnpm@11.0.6 --registry=https://registry.npmmirror.com
 WORKDIR /app
 
 FROM base AS deps
@@ -22,7 +26,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm exec next build
 
-FROM node:22-bookworm-slim AS runner
+FROM ${NODE_IMAGE} AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production

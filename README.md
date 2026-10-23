@@ -88,7 +88,15 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 一键创建应用（`src/lib/feishu/`） | ✅ 61 项自测（真实飞书链路未验，需真机） |
 | 接口端到端冒烟 | ✅ 49 项（`bash scripts/smoke-api.sh`） |
 | Chrome 插件 | ✅ 可加载（图标/飞书直写/配对码）；真实凭证联调待做 |
-| 部署与真机验证 | ⏳ 待做（服务器 SSH / 证书） |
+| 部署 | ✅ 已上线 <https://readinsight.bamamei.online>（`bash scripts/deploy-server.sh`） |
+| 真机验证（真实飞书链路 / 插件配准 / 豆包宿主） | ⏳ 待做 |
+
+## 线上服务
+
+- 地址：<https://readinsight.bamamei.online>
+- 健康检查：<https://readinsight.bamamei.online/api/health>
+- 发布：`bash scripts/deploy-server.sh`（源码 SSH 同步 → Docker 重建 → 健康检查）
+- 部署细节与服务器现状：[DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## 技术栈
 

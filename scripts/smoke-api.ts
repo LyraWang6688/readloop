@@ -187,6 +187,17 @@ interface SubmitData {
 
 async function main() {
   // ============================================================
+  console.log("\n【0】健康检查 / 首页");
+  // ============================================================
+  const health = await fetch(`${BASE}/api/health`);
+  const healthBody = (await health.json()) as { status?: string; service?: string };
+  check("GET /api/health → 200", health.status, 200);
+  check("health status = ok", healthBody.status, "ok");
+  check("health service = readloop", healthBody.service, "readloop");
+  check("GET / → 页面可访问（非 404）", (await fetch(`${BASE}/`)).status, 200);
+  check("GET /privacy → 200", (await fetch(`${BASE}/privacy`)).status, 200);
+
+  // ============================================================
   console.log("\n【1】授权码 → host_token");
   // ============================================================
   const goodLicense = generateLicenseCode(LICENSE_SECRET);
