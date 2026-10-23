@@ -12,6 +12,12 @@
  */
 
 import { addDays, isDateString, todayInShanghai } from "./date";
+import {
+  adaptDifficulty,
+  DEFAULT_QUOTA,
+  type DifficultyProfile,
+  type RecentPerformance,
+} from "./difficulty";
 import { ModelConfigError, normalizeModelConfig } from "./model";
 import {
   isPointState,
@@ -103,6 +109,11 @@ export interface TodayResponse {
   answered: 0;
   questions: TodayQuestion[];
   session_context: TodaySessionContext;
+  /**
+   * 按「最近表现」算出的今日难度（宿主可选传 performance）。
+   * 不传时 = 默认配额 + 样本不足说明；宿主可以拿 reason 向用户解释。
+   */
+  difficulty: DifficultyProfile;
 }
 
 /** 回写飞书表的字段（宿主必须原样写回，不要自己重算） */
@@ -130,6 +141,43 @@ export interface SubmitResponse {
 // ============================================================
 // 小工具
 // ============================================================
+
+/**
+ * 解析可选的 `performance`：{ attempts, correct }。
+ *
+ * 宿主从 practice_events 取最近 20 题（或最近 N 天）算出两个数；
+ * 不传就是「没有数据」，难度维持默认。
+ */
+function parsePerformance(
+  input: unknown
+): { ok: true; value: RecentPerformance | null } | { ok: false; message: string } {
+  if (input === undefined || input === null) {
+    return { ok: true, value: null };
+  }
+  if (typeof input !== "object" || Array.isArray(input)) {
+    return { ok: false, message: "performance 必须是对象：{ attempts, correct }" };
+  }
+  const record = input as Record<string, unknown>;
+  const attempts = record.attempts;
+  const correct = record.correct;
+  if (
+    typeof attempts !== "number" ||
+    !Number.isInteger(attempts) ||
+    attempts < 0 ||
+    attempts > 100_000
+  ) {
+    return { ok: false, message: "performance.attempts 必须是非负整数" };
+  }
+  if (
+    typeof correct !== "number" ||
+    !Number.isInteger(correct) ||
+    correct < 0 ||
+    correct > attempts
+  ) {
+    return { ok: false, message: "performance.correct 必须是 0 到 attempts 之间的整数" };
+  }
+  return { ok: true, value: { attempts, correct } };
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -194,15 +242,25 @@ export function orchestrateToday(
     return fail(400, "MODEL_CONFIG_INVALID", message);
   }
 
-  // 3. 知识点：中文表字段 → 内部结构
+  // 3. 最近表现（可选）：宿主从 practice_events 取最近 N 题，只传两个数字
+  const performanceResult = parsePerformance(record.performance);
+  if (!performanceResult.ok) {
+    return fail(400, "INVALID_PARAMS", performanceResult.message);
+  }
+  const difficulty = adaptDifficulty(performanceResult.value ?? { attempts: 0, correct: 0 }, DEFAULT_QUOTA);
+
+  // 4. 知识点：中文表字段 → 内部结构
   const parsed = parsePoints(record.points);
   if (!parsed.ok) {
     return fail(422, parsed.code, parsed.message, parsed.details);
   }
 
-  // 4. 选题 → 出题 → 签名
+  // 5. 选题 → 出题 → 签名
   //    MVP 不读 READLOOP_QUESTION_LLM（纯模板）；将来在此按开关注入 questions.ts 的 polisher
-  const selection = selectDailyPoints(parsed.points, date);
+  const selection = selectDailyPoints(parsed.points, date, {
+    // 难度只影响「今天引入几个新点」；到期/补位规则不变
+    newQuota: difficulty.newQuota,
+  });
   const questions = buildQuestions(selection, { pool: parsed.points });
 
   const publicQuestions = questions.map((question) =>
@@ -222,6 +280,7 @@ export function orchestrateToday(
         due_count: selection.dueCount,
         weak_points: selection.weakPoints,
       },
+      difficulty,
     },
   };
 }

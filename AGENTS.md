@@ -38,6 +38,7 @@ src/
 │   ├── selection.ts              # 每日选题（纯函数，确定性）
 │   ├── questions.ts              # 题面构造（纯函数）
 │   ├── review.ts                 # today/submit 编排
+│   ├── metrics.ts                # 学习效果指标（保持率/完成率/建议）
 │   ├── token.ts                  # 授权码 / host_token / question_id 签名
 │   ├── date.ts                   # 上海时区日期工具
 │   ├── http.ts                   # 响应信封 / 鉴权 / 错误码
@@ -72,6 +73,7 @@ npx tsx scripts/token-check.ts
 npx tsx scripts/selection-check.ts
 npx tsx scripts/review-check.ts
 npx tsx scripts/setup-app-check.ts
+npx tsx scripts/metrics-check.ts
 
 # 发授权码（离线计算，不写库；换 LICENSE_SECRET 会让旧码全失效）
 LICENSE_SECRET=你的密钥 npx tsx scripts/license-gen.ts 10
@@ -96,9 +98,10 @@ bash scripts/deploy-server.sh
 2. **agent 是嘴，不是脑子**：语气与表达交给宿主模型，对错与复习时间由工具返回。
 3. **数据归用户**：服务端不存储任何用户数据，也不直接访问飞书表格（由宿主用自己的飞书能力读写）。
 4. **服务端无状态**：身份、题目、授权都靠 HMAC 签名（`src/lib/token.ts`，规格见 `docs/API_IMPLEMENTATION.md` §2）。不要为了「方便」加缓存库或会话库。
-5. **凭证永不进日志/上下文**：`api_key`、`app_secret`、完整 `host_token` 不得出现在日志、错误 `details` 或宿主的对话里（插件用配对码自取）。
-6. **文档同步**：改规则要同步 `docs/REVIEW_RULES.md` 与 `docs/MEMORY_SCIENCE.md`，改决策要写进 `docs/DECISIONS.md`，改接口要同步 `docs/API_IMPLEMENTATION.md` 与 Store 的 `references/api.md`。
-7. **技能包不在这里**：改动 `skills/readloop` 请去 Store 仓库，本仓库不再保留副本。
+5. **改规则先看指标**：调 `scheduler.ts` / `difficulty.ts` / `selection.ts` 前，先用 `/api/review/metrics` 或 `scripts/metrics-check.ts` 做改前/改后对比，结论写进 `docs/REVIEW_RULES.md` §十一。
+6. **凭证永不进日志/上下文**：`api_key`、`app_secret`、完整 `host_token` 不得出现在日志、错误 `details` 或宿主的对话里（插件用配对码自取）。
+7. **文档同步**：改规则要同步 `docs/REVIEW_RULES.md` 与 `docs/MEMORY_SCIENCE.md`，改决策要写进 `docs/DECISIONS.md`，改接口要同步 `docs/API_IMPLEMENTATION.md` 与 Store 的 `references/api.md`。
+8. **技能包不在这里**：改动 `skills/readloop` 请去 Store 仓库，本仓库不再保留副本。
 
 ## 历史说明
 

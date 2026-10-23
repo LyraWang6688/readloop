@@ -66,6 +66,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | `POST /api/license/activate` | 8 位授权码 → `host_token`（年度） | 无 |
 | `POST /api/review/today` | 传知识点 + 模型配置 → 今日题（`question_id` 签名） | Bearer |
 | `POST /api/review/submit` | 提交一题 → 判分 + `updates`（服务端算好，宿主只抄写） | Bearer |
+| `POST /api/review/metrics` | 传答题记录 → 保持率分档 / 正确率区间 / 完成率 / 建议（改规则的依据） | Bearer |
 | `POST /api/setup/app/start` | 用飞书 Device Grant 帮用户一键创建自己的飞书应用 | Bearer |
 | `GET /api/setup/app/status` | 轮询创建结果 + 三项校验 | Bearer |
 | `POST/GET /api/setup/app/pair` | 配对码绑定 / 插件一次性取凭证 | Bearer / 配对码 |
@@ -81,7 +82,8 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 技能包（Skill） | ✅ 已进 Store，契约同步到 `readloop-v0.2.3` / `readloop-service-v0.2.1`（PR #291/#294/#302） |
 | 记忆调度（`scheduler.ts`） | ✅ 29 项自测 |
 | 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
-| 动态难度（`difficulty.ts`） | ✅ 20 项自测 |
+| 动态难度（`difficulty.ts`） | ✅ 46 项自测（20 题门槛 + 贝叶斯平滑，已接 `today.performance`） |
+| 学习效果指标（`metrics.ts`） | ✅ 80 项自测 + `/api/review/metrics` |
 | 日期 / 签名（`date.ts` / `token.ts`） | ✅ 22 + 29 项自测 |
 | 每日组题（`selection.ts` / `questions.ts`） | ✅ 89 项自测 |
 | today/submit 编排（`review.ts`） | ✅ 91 项自测 |
@@ -130,13 +132,14 @@ npx tsx scripts/date-check.ts          # 22
 npx tsx scripts/token-check.ts         # 29
 npx tsx scripts/selection-check.ts     # 89
 npx tsx scripts/review-check.ts        # 91
-npx tsx scripts/setup-app-check.ts     # 61
+npx tsx scripts/setup-app-check.ts     # 65
+npx tsx scripts/metrics-check.ts       # 80
 ```
 
 端到端冒烟（起一个真实 `next start`，不调飞书/模型）：
 
 ```bash
-bash scripts/smoke-api.sh              # 49 项
+bash scripts/smoke-api.sh              # 75 项
 ```
 
 发授权码（离线计算，不写库）：

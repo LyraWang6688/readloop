@@ -711,6 +711,64 @@ check("请求体不是对象 → INVALID_PARAMS", notObject.ok ? "" : notObject.
 // ============================================================
 // 汇总
 // ============================================================
+// ============================================================
+// 【6】今日难度：performance → adaptDifficulty → 新点配额
+// ============================================================
+console.log("\n【6】今日难度（performance → difficulty）");
+
+const noPerformance = orchestrateToday({ date: DATE, model: MODEL, points: POINTS }, SECRET, NOW);
+check("不传 performance → steady", noPerformance.ok ? noPerformance.data.difficulty.level : "", "steady");
+check("不传 performance → 默认新点配额 2", noPerformance.ok ? noPerformance.data.difficulty.newQuota : 0, 2);
+check(
+  "不传 performance → 理由说明样本不足",
+  noPerformance.ok ? noPerformance.data.difficulty.reason.includes("样本不足") : false,
+  true
+);
+
+const harderToday = orchestrateToday(
+  { date: DATE, model: MODEL, points: POINTS, performance: { attempts: 20, correct: 19 } },
+  SECRET,
+  NOW
+);
+check("最近 19/20 → harder", harderToday.ok ? harderToday.data.difficulty.level : "", "harder");
+check("harder → 新点配额 3", harderToday.ok ? harderToday.data.difficulty.newQuota : 0, 3);
+check(
+  "harder → 平滑正确率随响应返回",
+  harderToday.ok ? Math.abs((harderToday.data.difficulty.smoothedSuccessRate ?? 0) - 0.8933) < 0.002 : false,
+  true
+);
+
+const easierToday = orchestrateToday(
+  { date: DATE, model: MODEL, points: POINTS, performance: { attempts: 20, correct: 10 } },
+  SECRET,
+  NOW
+);
+check("最近 10/20 → easier", easierToday.ok ? easierToday.data.difficulty.level : "", "easier");
+check("easier → 新点配额 1", easierToday.ok ? easierToday.data.difficulty.newQuota : 0, 1);
+
+const deterministicHarder = orchestrateToday(
+  { date: DATE, model: MODEL, points: POINTS, performance: { attempts: 20, correct: 19 } },
+  SECRET,
+  NOW
+);
+check(
+  "同样输入 + performance → 同样的题包",
+  JSON.stringify(deterministicHarder.ok ? deterministicHarder.data.questions : null),
+  JSON.stringify(harderToday.ok ? harderToday.data.questions : null)
+);
+
+const badPerformanceCases: Array<[string, unknown]> = [
+  ["performance 不是对象", "x"],
+  ["attempts 为负", { attempts: -1, correct: 0 }],
+  ["correct > attempts", { attempts: 5, correct: 6 }],
+  ["attempts 非整数", { attempts: 3.5, correct: 2 }],
+];
+for (const [name, performance] of badPerformanceCases) {
+  const result = orchestrateToday({ date: DATE, model: MODEL, points: POINTS, performance }, SECRET, NOW);
+  check(`${name} → INVALID_PARAMS`, result.ok ? "" : result.code, "INVALID_PARAMS");
+  check(`${name} → 400`, result.ok ? 0 : result.status, 400);
+}
+
 console.log(`\n结果：${passed} 通过，${failed} 失败`);
 if (failed > 0) {
   console.log("❌ 有断言失败");

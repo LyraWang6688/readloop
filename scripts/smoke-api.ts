@@ -313,6 +313,39 @@ async function main() {
   check("model 非 https → 400", badModel.status, 400);
   check("错误码 MODEL_CONFIG_INVALID", badModel.envelope.error?.code, "MODEL_CONFIG_INVALID");
 
+  const harder = await call<TodayData & { difficulty: { level: string; newQuota: number; smoothedSuccessRate: number | null } }>(
+    "POST",
+    "/api/review/today",
+    {
+      body: { date: DATE, model: MODEL, performance: { attempts: 20, correct: 19 }, points: makePoints() },
+      token: hostToken,
+    }
+  );
+  check("最近 19/20 → today 200", harder.status, 200);
+  check("difficulty.level = harder", harder.envelope.data?.difficulty.level, "harder");
+  check("difficulty.newQuota = 3", harder.envelope.data?.difficulty.newQuota, 3);
+  checkTrue(
+    "difficulty.smoothedSuccessRate 有值",
+    typeof harder.envelope.data?.difficulty.smoothedSuccessRate === "number"
+  );
+
+  const easier = await call<TodayData & { difficulty: { level: string; newQuota: number } }>(
+    "POST",
+    "/api/review/today",
+    {
+      body: { date: DATE, model: MODEL, performance: { attempts: 20, correct: 10 }, points: makePoints() },
+      token: hostToken,
+    }
+  );
+  check("最近 10/20 → difficulty.level = easier", easier.envelope.data?.difficulty.level, "easier");
+  check("difficulty.newQuota = 1", easier.envelope.data?.difficulty.newQuota, 1);
+
+  const badPerformance = await call("POST", "/api/review/today", {
+    body: { date: DATE, model: MODEL, performance: { attempts: 5, correct: 6 }, points: makePoints() },
+    token: hostToken,
+  });
+  check("performance 非法 → 400", badPerformance.status, 400);
+
   // ============================================================
   console.log("\n【4】submit：判分、updates、幂等");
   // ============================================================
@@ -429,6 +462,70 @@ async function main() {
     token: hostToken,
   });
   check("start 传整条链接 → 400（服务端不解析 URL）", startBadToken.status, 400);
+
+  // ============================================================
+  console.log("\n【6】metrics：学习效果指标");
+  // ============================================================
+  const metricsNoAuth = await call("POST", "/api/review/metrics", {
+    body: { practice: [] },
+  });
+  check("metrics 无 token → 401", metricsNoAuth.status, 401);
+
+  const emptyMetrics = await call<{
+    overall: { attempts: number; successRate: number | null };
+    sample: { enough: boolean };
+    recommendations: Array<{ code: string }>;
+  }>("POST", "/api/review/metrics", { body: { practice: [] }, token: hostToken });
+  check("空 practice → 200", emptyMetrics.status, 200);
+  check("空 practice → attempts 0", emptyMetrics.envelope.data?.overall.attempts, 0);
+  check("空 practice → 正确率 null", emptyMetrics.envelope.data?.overall.successRate, null);
+  check("空 practice → 样本不足", emptyMetrics.envelope.data?.sample.enough, false);
+  checkTrue(
+    "空 practice → 给出 SAMPLE_TOO_SMALL 建议",
+    (emptyMetrics.envelope.data?.recommendations ?? []).some((item) => item.code === "SAMPLE_TOO_SMALL")
+  );
+
+  const metricsFixture = [
+    { 答题时间: "2026-10-23", 题型: "choice", 是否正确: "correct", 信号强度: "自己译对", 用时毫秒: 10000, 题源: "新点", 复习间隔: 0 },
+    { 答题时间: "2026-10-20", 题型: "cloze", 是否正确: "wrong", 信号强度: "错", 用时毫秒: 60000, 题源: "到期", 复习间隔: 3 },
+    { 答题时间: "2026-10-15", 题型: "choice", 是否正确: "correct", 信号强度: "提示后对", 用时毫秒: 30000, 题源: "到期", 复习间隔: 7 },
+  ];
+  const metrics = await call<{
+    window: { end: string; days: number };
+    overall: { attempts: number; correct: number; successRate: number | null; avgElapsedMs: number | null };
+    byInterval: Array<{ key: string; attempts: number }> | null;
+    leech: { leechRatio: number | null };
+    adherence: { activeDays: number };
+  }>("POST", "/api/review/metrics", {
+    body: {
+      date: DATE,
+      windowDays: 28,
+      practice: metricsFixture,
+      points: [
+        { 归一化内容: "a", 状态: "review", 答错次数: 0 },
+        { 归一化内容: "b", 状态: "review", 答错次数: 4 },
+      ],
+    },
+    token: hostToken,
+  });
+  check("完整 metrics → 200", metrics.status, 200);
+  check("metrics attempts 3", metrics.envelope.data?.overall.attempts, 3);
+  check("metrics correct 2", metrics.envelope.data?.overall.correct, 2);
+  check("metrics 间隔分档 5 档", metrics.envelope.data?.byInterval?.length, 5);
+  checkTrue("metrics 有 leech 占比", typeof metrics.envelope.data?.leech.leechRatio === "number");
+  check("metrics 有练习天数", metrics.envelope.data?.adherence.activeDays, 3);
+
+  const badWindow = await call("POST", "/api/review/metrics", {
+    body: { windowDays: 0, practice: [] },
+    token: hostToken,
+  });
+  check("windowDays=0 → 400", badWindow.status, 400);
+
+  const badPractice = await call("POST", "/api/review/metrics", {
+    body: { practice: "nope" },
+    token: hostToken,
+  });
+  check("practice 不是数组 → 400", badPractice.status, 400);
 
   console.log(`\n结果：${passed} 通过，${failed} 失败\n`);
   process.exit(failed === 0 ? 0 : 1);

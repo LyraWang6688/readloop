@@ -148,8 +148,9 @@
 
 1. `date` 缺失 → 用 `todayInShanghai()`；格式不对 → 400 `INVALID_PARAMS`
 2. `model` → `normalizeModelConfig()`，失败 400 `MODEL_CONFIG_INVALID`
-3. `points` 不是数组或为空 → 422 `POINTS_EMPTY`
-4. 逐条校验必填：`归一化内容`（非空格）、`状态` ∈ {new, learning, review, relearning, mastered}；数字字段接受 number / 数字字符串，缺省用初始值 → 非法 422 `POINTS_INVALID`，`details` 指出第几条哪个字段
+3. `performance`（可选，见 §4.5）→ 非法 400 `INVALID_PARAMS`
+4. `points` 不是数组或为空 → 422 `POINTS_EMPTY`
+5. 逐条校验必填：`归一化内容`（非空格）、`状态` ∈ {new, learning, review, relearning, mastered}；数字字段接受 number / 数字字符串，缺省用初始值 → 非法 422 `POINTS_INVALID`，`details` 指出第几条哪个字段
 
 字段映射（表字段 → 内部）见 `references/schema.md`；内部类型放 `src/lib/selection.ts`：
 
@@ -229,7 +230,16 @@ active = points where state != "mastered"
   "total": 8,
   "answered": 0,
   "questions": [ { "question_id": "…", "type": "choice", "stem": "…", "options": ["…"], "context": null, "hint": null } ],
-  "session_context": { "new_count": 2, "due_count": 5, "weak_points": ["the percentage of", "主谓一致"] }
+  "session_context": { "new_count": 2, "due_count": 5, "weak_points": ["the percentage of", "主谓一致"] },
+  "difficulty": {
+    "level": "steady",
+    "newQuota": 2,
+    "leechQuota": 2,
+    "successRate": 0.8,
+    "smoothedSuccessRate": 0.793,
+    "prior": { "rate": 0.78, "weight": 10 },
+    "reason": "正确率 80%（平滑后 79%）在目标区内，维持"
+  }
 }
 ```
 
@@ -237,6 +247,22 @@ active = points where state != "mastered"
 - `session_context.new_count` / `due_count` = **本套题里**来自 new / 到期点的题数
 - `weak_points` = 本套题来源点里 `(lapses desc, need desc)` 前 2 的 `知识点` 原文
 - `answered` 恒为 0（服务端不记进度；宿主要显示进度就自己数 submit 次数）
+- `difficulty`：按 `performance` 算出的今日难度（见 §4.5）；不传 `performance` 时是默认配额 + 「样本不足」说明
+
+### 4.5 可选参数 `performance`（把难度接上真实数据）
+
+宿主从 `practice_events` 取**最近 20 题**（或最近 N 天）算出两个数字传上来，服务端用
+`adaptDifficulty()` 决定今天引入几个新点、放几个难题：
+
+```json
+{ "performance": { "attempts": 20, "correct": 16 } }
+```
+
+- `attempts`：窗口内作答题数（非负整数）；`correct`：其中答对题数（0 ≤ correct ≤ attempts）
+- 不传 = 没有数据 → `difficulty.level = "steady"`、默认配额
+- **小样本保护**：`attempts < 20` 时不下结论，维持当前难度（这是「别因为昨天运气好就加难」）
+- **贝叶斯平滑**：决策用 `(correct + 0.78 × 10) / (attempts + 10)`，原始正确率只用于展示
+- 今日题量不变；`newQuota` 只影响「新点」这一档（软上限，补位仍可能补进新点）
 
 ---
 
@@ -391,6 +417,8 @@ lark.registerApp({
 | `src/lib/selection.ts` | 选题、打散 | `scripts/selection-check.ts` |
 | `src/lib/questions.ts` | 题面构造 | 并入 `selection-check.ts` |
 | `src/lib/review.ts` | submit 编排（判分→档位→状态→updates） | `scripts/review-check.ts` |
+| `src/lib/metrics.ts` | 学习效果指标（保持率分档/完成率/建议） | `scripts/metrics-check.ts` |
+| `src/lib/difficulty.ts` | 难度调节（20 题门槛 + 贝叶斯平滑） | `scripts/difficulty-check.ts` |
 | `src/lib/feishu/session-store.ts` | 创建会话 TTL / 一次性交付 | `scripts/setup-app-check.ts` |
 
 脚本统一用 `npx tsx scripts/xxx-check.ts`，成功时最后一行打印 `✅ N 项断言通过`，失败 `process.exit(1)`。
@@ -404,12 +432,83 @@ lark.registerApp({
 - `today` 组题（确定性、`context` 恒 null、选项 4 个、归档点不出题、leech 带提示、参数错误）
 - `submit`（字母与原文双提交、对/错/提示档位、`updates` 10 字段、下次复习日期、幂等、篡改/过期拒绝）
 - `setup` 接口的 401/404/400 分支（**不触发真实飞书调用**）
+- `metrics` 接口（空数据 / 完整分档 / 非法参数 / 鉴权），以及 `today.performance → difficulty` 的 harder/easier
 
 不依赖飞书凭证，也不依赖模型 Key。
 
 ---
 
-## 十、与 Store 文档的差异（✅ 已同步）
+## 十、POST /api/review/metrics（学习效果指标）
+
+宿主把「答题记录 + 当前知识点」传上来，服务算出**可复核**的学习指标与确定性建议。
+服务端不存数据，算完即忘；也不调模型。用来回答「规则是否有效」，而不是拿来出题。
+
+请求：
+
+```json
+{
+  "date": "2026-10-23",
+  "windowDays": 28,
+  "practice": [
+    { "答题时间": "2026-10-20", "知识点": "subsequent", "题型": "choice", "是否正确": "correct",
+      "信号强度": "自己译对", "用时毫秒": 12000, "题源": "到期", "复习间隔": 7 }
+  ],
+  "points": [
+    { "归一化内容": "subsequent", "状态": "review", "答错次数": 0 }
+  ]
+}
+```
+
+- `windowDays`：1–90，默认 28；`practice` / `points` 各最多 5000 行
+- `practice` 行里 `答题时间` 与 `是否正确` 必填；其它字段缺了就少算对应指标（脏行跳过并计入 `skippedRows`）
+- **`复习间隔`**（作答前的间隔天数，数字）用于分档保持率；缺这个字段时分档为 `null`，并在 `missing` 里说明
+- `是否正确` 兼容 `correct/wrong` / `对/错` / `true/false`；`题型` 兼容 `choice/cloze`
+
+返回（节选）：
+
+```json
+{
+  "window": { "start": "2026-09-26", "end": "2026-10-23", "days": 28, "practiceRows": 120, "skippedRows": 2 },
+  "overall": { "attempts": 120, "correct": 96, "successRate": 0.8, "smoothedSuccessRate": 0.812,
+               "avgElapsedMs": 24000, "hintUsedRate": 0.15, "hintSample": 120 },
+  "byInterval": [
+    { "key": "7_13", "label": "7–13 天", "minDays": 7, "maxDays": 13,
+      "attempts": 18, "correct": 14, "successRate": 0.778, "smoothedSuccessRate": 0.757 }
+  ],
+  "byType": [ { "type": "choice", "attempts": 60, "correct": 52, "successRate": 0.867, "smoothedSuccessRate": 0.857 } ],
+  "bySource": [ { "source": "到期", "attempts": 80, "correct": 64, "successRate": 0.8, "smoothedSuccessRate": 0.812 } ],
+  "leech": { "activePoints": 40, "leechPoints": 6, "leechRatio": 0.15 },
+  "adherence": { "activeDays": 20, "windowDays": 28, "rate": 0.714 },
+  "target": { "min": 0.7, "max": 0.85, "inBand": true, "decisionRate": 0.812 },
+  "sample": { "attempts": 120, "minSample": 20, "enough": true },
+  "prior": { "rate": 0.78, "weight": 10 },
+  "missing": [],
+  "recommendations": [
+    { "code": "LONG_INTERVAL_WEAK", "level": "warn", "message": "长间隔（7 天以上）保持率 68% 偏低：缩短间隔，或答对后给提示" }
+  ]
+}
+```
+
+指标口径：
+
+| 指标 | 定义 |
+|---|---|
+| 分档保持率 | 按「作答前间隔天数」分 5 档：当天 0 / 1–2 / 3–6 / 7–13 / 14+；每档给 attempts、correct、原始与平滑正确率 |
+| 目标区间 | 原始整体正确率是否在 70–85%；`decisionRate` 给平滑值（做判断用） |
+| 答错率 | `1 - successRate`；另按题型 / 题源分组 |
+| leech 占比 | 活跃点里 `答错次数 ≥ 4` 的比例（`mastered` 不计） |
+| 完成率 | 窗口内有作答的天数 / 窗口天数 |
+| 每题用时 | `用时毫秒` 的平均值；缺该字段时为 null |
+| 建议 | 确定性规则（样本不足/太简单/太难/长间隔弱/难词多/完成率低/太慢/缺字段），最多 3 条 |
+
+| 状态码 | 含义 |
+|---|---|
+| 400 | 入参不合法（practice 非数组、windowDays 越界、请求体不是对象） |
+| 401 / 402 | 同其它接口 |
+
+> 这份接口是「改规则的依据」：调 `scheduler.ts` / `difficulty.ts` 前，先用它跑一遍改前 / 改后的指标对比。
+
+## 十一、与 Store 文档的差异（✅ 已同步）
 
 > 2026-10-23：Store 的 `skills/readloop` 已按本节同步，并持续跟进：
 >
