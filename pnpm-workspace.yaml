@@ -3,3 +3,6 @@ allowBuilds:
   msw: true
   sharp: true
   unrs-resolver: true
+
+# pnpm store 放到用户目录，避免在仓库里生成 600M 的 .pnpm-store
+storeDir: ~/.pnpm-store
