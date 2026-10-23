@@ -133,20 +133,51 @@ AI 宿主（豆包工作 / Codex / Work Buddy）本身就是一个成熟 agent�
 - 用我们自己的应用 = 我们的凭证能读所有用户的表，等于我们托管了数据，与「数据归用户」冲突
 - 用户自建应用（免费）+ 把它加成表格协作者 → 我们始终没有访问权
 
-**插件的首次配置**（一次性，约 10 分钟，由 Skill 第 3 步引导）
+**一键创建：用户不用进开发者后台**
 
-1. 飞书开放平台 → 创建「企业自建应用」→ 拿 App ID / App Secret
-2. 权限管理 → 开通 `bitable:app`（需要自动补选项时还要 `base:field:update`）
-3. 版本管理 → 创建版本并发布
-4. 表格右上角 ⋯ → 添加文档应用 → 把这个应用加成「可编辑」
-5. 把表格链接 + App ID + Secret 填进插件的设置页
+飞书开放平台的「应用注册」能力（`@larksuiteoapi/node-sdk` 的 `registerApp`）可以帮用户**在他自己的组织里**创建一个属于他的自建应用，用户只需要点开链接、在飞书里点「同意」。
 
-参考实现（同类产品，同一套做法）：
-[feishu-web-clipper](https://github.com/EConG37/feishu-web-clipper)、
-[job-tracker-extension](https://github.com/Zheyi-D/job-tracker-extension)、
-[x-to-feishu-extension](https://github.com/Sharkforever/x-to-feishu-extension)。
+```
+Skill 第 3 步
+   ① 用户发来表格链接 → 解析 app_token
+   ② Skill 调 /api/setup/app/start
+         后端用「发起方应用」身份跑 registerApp
+         → 返回 verification_url
+   ③ 用户点链接 → 飞书里点「同意」
+   ④ Skill 轮询 /api/setup/app/status → 拿到 app_id / app_secret
+   ⑤ 校验三项：换 token → 读表 → 写测试记录并删除
+   ⑥ 全过 → 交给插件，服务端丢弃凭证
+```
 
-> 插件靠 `host_permissions` 可以直连 `open.feishu.cn`，不受 CORS 限制——所以不需要后端中转，写入是实时的。
+**发起方应用**：`cli_aa51d940d7381c06`。它只负责「发起创建」，拿不到用户任何数据。需要两个应用身份权限：
+
+| 权限 | 用途 |
+|---|---|
+| `application:application:self_manage` | 管理并发布被创建的应用自身配置 |
+| `application:application:patch` | 自动写入 OAuth 回调、refresh token、订阅方式 |
+
+**校验三项**（缺一不可）
+
+| 检查 | 失败说明 |
+|---|---|
+| ① `tenant_access_token/internal` | App ID / Secret 不对 |
+| ② 读目标表 + 字段列表 | 应用没被加成协作者，或没开 `bitable:app` |
+| ③ 写一条记录再删除 | 只给了「可阅读」，没给「可编辑」 |
+
+> 第 ③ 项是关键：能读不代表能写。
+
+**兜底：手动创建**（`registerApp` 不可用时）
+
+1. 开放平台 → 创建「企业自建应用」→ App ID / Secret
+2. 开通 `bitable:app`（自动补选项再加 `base:field:update`）
+3. 创建版本并发布（**不发布权限不生效**）
+4. 表格右上角 ⋯ → 添加文档应用 → 设为「可编辑」
+5. 凭证填进插件设置
+
+参考实现：[feishu-web-clipper](https://github.com/EConG37/feishu-web-clipper)、
+[job-tracker-extension](https://github.com/Zheyi-D/job-tracker-extension)。
+
+> 插件靠 `host_permissions` 可以直连 `open.feishu.cn`，不受 CORS 限制——写入是实时的，不需要后端中转。
 
 ### 4.4 初始化
 
@@ -160,8 +191,8 @@ Skill 的本地配置 `~/.readloop/config.json`：
 
 1. 首次激活：授权码换 `host_token`
 2. 选模型（BYOK）
-3. 建表 + 配置写入通道：复制模板 → 校验字段 → 引导创建自建应用并加成协作者
-4. 装 Chrome 插件（把 App ID / Secret / 表格链接填进插件设置）
+3. 建表 + 一键创建写入应用 + 三项校验（§4.3）
+4. 装 Chrome 插件（配对码或手填凭证）
 5. 建定时任务
 
 细节见 [SKILL.md（Store）](https://github.com/LyraWang6688/ai-capability-store/blob/main/skills/readloop/SKILL.md)。
