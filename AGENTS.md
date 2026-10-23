@@ -1,5 +1,10 @@
 # 项目上下文 - 个性化英文阅读学习工具
 
+> **2026-10-23 架构调整（当前有效）**：项目更名为 ReadLoop，产品形态从 Web App 改为
+> 「Chrome 插件采集 + 飞书多维表格存储 + AI 宿主复盘」。下面的技术栈与目录结构描述的是
+> **现有代码**，不代表新架构目标。改动前请先读：
+> [ARCHITECTURE.md](docs/ARCHITECTURE.md)、[REVIEW_RULES.md](docs/REVIEW_RULES.md)、[DECISIONS.md](docs/DECISIONS.md)。
+
 ## 技术栈
 
 - **Framework**: Next.js 16 (App Router)

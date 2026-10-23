@@ -1,363 +1,99 @@
-# projects
+# ReadLoop
 
-这是一个基于 [Next.js 16](https://nextjs.org) + [shadcn/ui](https://ui.shadcn.com) 的全栈应用项目，由扣子编程 CLI 创建。
+> **不是又一个背单词 App，而是一套有记忆科学依据、并由你的真实阅读数据持续校准的复习机制。**
 
-## 快速开始
+读的时候暴露短板，AI 助手按时帮你复习。
 
-### 启动开发服务器
+---
 
-```bash
-coze dev
-```
-
-启动后，在浏览器中打开 [http://localhost:5000](http://localhost:5000) 查看应用。
-
-开发服务器支持热更新，修改代码后页面会自动刷新。
-
-### 构建生产版本
-
-```bash
-coze build
-```
-
-### 启动生产服务器
-
-```bash
-coze start
-```
-
-## 项目结构
+## 它是什么
 
 ```
-src/
-├── app/                      # Next.js App Router 目录
-│   ├── layout.tsx           # 根布局组件
-│   ├── page.tsx             # 首页
-│   ├── globals.css          # 全局样式（包含 shadcn 主题变量）
-│   └── [route]/             # 其他路由页面
-├── components/              # React 组件目录
-│   └── ui/                  # shadcn/ui 基础组件（优先使用）
-│       ├── button.tsx
-│       ├── card.tsx
-│       └── ...
-├── lib/                     # 工具函数库
-│   └── utils.ts            # cn() 等工具函数
-└── hooks/                   # 自定义 React Hooks（可选）
-
-server/
-├── index.ts                 # 自定义服务器入口
-├── tsconfig.json           # Server TypeScript 配置
-└── dist/                    # 编译输出目录（自动生成）
+你在真实阅读中划词
+        ↓
+AI 对比你的翻译和参考译文，揪出没掌握的表达
+        ↓
+沉淀进你自己的飞书多维表格
+        ↓
+每天由 AI 助手按记忆曲线出题，陪你练几道
 ```
 
-## 核心开发规范
+**数据、模型 API、浏览器插件都是你自己的。** 我们只提供规则和那套陪你练的机制。
 
-### 1. 组件开发
+## 和普通单词 App 不一样的地方
 
-**优先使用 shadcn/ui 基础组件**
+**1. 生词来自你正在读的东西，不是预设词表**
+关注 AI，知识点就全是 AI 文章里的表达；例句就是你读到的那句原文，带来源链接。
 
-本项目已预装完整的 shadcn/ui 组件库，位于 `src/components/ui/` 目录。开发时应优先使用这些组件作为基础：
+**2. 陪伴式助手，不是答题机器**
+它记得你上周卡在哪个表达、这次是新错还是老错——因为它在读你的账本，而不是随机抽题。
 
-```tsx
-// ✅ 推荐：使用 shadcn 基础组件
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+**3. 规则有出处，参数靠数据校准**
+每条调度规则都能追到记忆科学的出处（[MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md)），并且会用你的真实作答数据持续修正。详见下方文档。
 
-export default function MyComponent() {
-  return (
-    <Card>
-      <CardHeader>标题</CardHeader>
-      <CardContent>
-        <Input placeholder="输入内容" />
-        <Button>提交</Button>
-      </CardContent>
-    </Card>
-  );
-}
+## 结构
+
+```
+Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后端服务（规则）  →  AI 宿主（每天陪你练）
 ```
 
-**可用的 shadcn 组件清单**
-
-- 表单：`button`, `input`, `textarea`, `select`, `checkbox`, `radio-group`, `switch`, `slider`
-- 布局：`card`, `separator`, `tabs`, `accordion`, `collapsible`, `scroll-area`
-- 反馈：`alert`, `alert-dialog`, `dialog`, `toast`, `sonner`, `progress`
-- 导航：`dropdown-menu`, `menubar`, `navigation-menu`, `context-menu`
-- 数据展示：`table`, `avatar`, `badge`, `hover-card`, `tooltip`, `popover`
-- 其他：`calendar`, `command`, `carousel`, `resizable`, `sidebar`
-
-详见 `src/components/ui/` 目录下的具体组件实现。
-
-### 2. 路由开发
-
-Next.js 使用文件系统路由，在 `src/app/` 目录下创建文件夹即可添加路由：
-
-```bash
-# 创建新路由 /about
-src/app/about/page.tsx
-
-# 创建动态路由 /posts/[id]
-src/app/posts/[id]/page.tsx
-
-# 创建路由组（不影响 URL）
-src/app/(marketing)/about/page.tsx
-
-# 创建 API 路由
-src/app/api/users/route.ts
-```
-
-**页面组件示例**
-
-```tsx
-// src/app/about/page.tsx
-import { Button } from '@/components/ui/button';
-
-export const metadata = {
-  title: '关于我们',
-  description: '关于页面描述',
-};
-
-export default function AboutPage() {
-  return (
-    <div>
-      <h1>关于我们</h1>
-      <Button>了解更多</Button>
-    </div>
-  );
-}
-```
-
-**动态路由示例**
-
-```tsx
-// src/app/posts/[id]/page.tsx
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
-  return <div>文章 ID: {id}</div>;
-}
-```
-
-**API 路由示例**
-
-```tsx
-// src/app/api/users/route.ts
-import { NextResponse } from 'next/server';
-
-export async function GET() {
-  return NextResponse.json({ users: [] });
-}
-
-export async function POST(request: Request) {
-  const body = await request.json();
-  return NextResponse.json({ success: true });
-}
-```
-
-### 3. 依赖管理
-
-**必须使用 pnpm 管理依赖**
-
-```bash
-# ✅ 安装依赖
-pnpm install
-
-# ✅ 添加新依赖
-pnpm add package-name
-
-# ✅ 添加开发依赖
-pnpm add -D package-name
-
-# ❌ 禁止使用 npm 或 yarn
-# npm install  # 错误！
-# yarn add     # 错误！
-```
-
-项目已配置 `preinstall` 脚本，使用其他包管理器会报错。
-
-### 4. 样式开发
-
-**使用 Tailwind CSS v4**
-
-本项目使用 Tailwind CSS v4 进行样式开发，并已配置 shadcn 主题变量。
-
-```tsx
-// 使用 Tailwind 类名
-<div className="flex items-center gap-4 p-4 rounded-lg bg-background">
-  <Button className="bg-primary text-primary-foreground">
-    主要按钮
-  </Button>
-</div>
-
-// 使用 cn() 工具函数合并类名
-import { cn } from '@/lib/utils';
-
-<div className={cn(
-  "base-class",
-  condition && "conditional-class",
-  className
-)}>
-  内容
-</div>
-```
-
-**主题变量**
-
-主题变量定义在 `src/app/globals.css` 中，支持亮色/暗色模式：
-
-- `--background`, `--foreground`
-- `--primary`, `--primary-foreground`
-- `--secondary`, `--secondary-foreground`
-- `--muted`, `--muted-foreground`
-- `--accent`, `--accent-foreground`
-- `--destructive`, `--destructive-foreground`
-- `--border`, `--input`, `--ring`
-
-### 5. 表单开发
-
-推荐使用 `react-hook-form` + `zod` 进行表单开发：
-
-```tsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-const formSchema = z.object({
-  username: z.string().min(2, '用户名至少 2 个字符'),
-  email: z.string().email('请输入有效的邮箱'),
-});
-
-export default function MyForm() {
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: { username: '', email: '' },
-  });
-
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log(data);
-  };
-
-  return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
-      <Input {...form.register('username')} />
-      <Input {...form.register('email')} />
-      <Button type="submit">提交</Button>
-    </form>
-  );
-}
-```
-
-### 6. 数据获取
-
-**服务端组件（推荐）**
-
-```tsx
-// src/app/posts/page.tsx
-async function getPosts() {
-  const res = await fetch('https://api.example.com/posts', {
-    cache: 'no-store', // 或 'force-cache'
-  });
-  return res.json();
-}
-
-export default async function PostsPage() {
-  const posts = await getPosts();
-
-  return (
-    <div>
-      {posts.map(post => (
-        <div key={post.id}>{post.title}</div>
-      ))}
-    </div>
-  );
-}
-```
-
-**客户端组件**
-
-```tsx
-'use client';
-
-import { useEffect, useState } from 'react';
-
-export default function ClientComponent() {
-  const [data, setData] = useState(null);
-
-  useEffect(() => {
-    fetch('/api/data')
-      .then(res => res.json())
-      .then(setData);
-  }, []);
-
-  return <div>{JSON.stringify(data)}</div>;
-}
-```
-
-## 常见开发场景
-
-### 添加新页面
-
-1. 在 `src/app/` 下创建文件夹和 `page.tsx`
-2. 使用 shadcn 组件构建 UI
-3. 根据需要添加 `layout.tsx` 和 `loading.tsx`
-
-### 创建业务组件
-
-1. 在 `src/components/` 下创建组件文件（非 UI 组件）
-2. 优先组合使用 `src/components/ui/` 中的基础组件
-3. 使用 TypeScript 定义 Props 类型
-
-### 添加全局状态
-
-推荐使用 React Context 或 Zustand：
-
-```tsx
-// src/lib/store.ts
-import { create } from 'zustand';
-
-interface Store {
-  count: number;
-  increment: () => void;
-}
-
-export const useStore = create<Store>((set) => ({
-  count: 0,
-  increment: () => set((state) => ({ count: state.count + 1 })),
-}));
-```
-
-### 集成数据库
-
-推荐使用 Prisma 或 Drizzle ORM，在 `src/lib/db.ts` 中配置。
+- **采集**：划词即用；也可以在宿主内置浏览器里直接读网页
+- **数据**：存在你自己的飞书空间，我们不托管
+- **规则**：选题、组卷、判分、记忆调度——确定性逻辑在服务端，不交给模型
+- **复盘**：Skill 装进豆包工作 / Codex / Work Buddy，用对话陪你做完
+
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 产品架构、宿主接入、数据层、MVP 范围 |
+| [REVIEW_RULES.md](docs/REVIEW_RULES.md) | 复习与出题规则（确定性部分） |
+| [MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md) | 规则的理论依据、现存偏差、待验证假设 |
+| [DECISIONS.md](docs/DECISIONS.md) | 决策记录：为什么这么定 |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | 部署方案与服务器现状 |
+| [PRODUCT_POSITIONING.md](docs/PRODUCT_POSITIONING.md) | 产品定位与目标用户 |
+
+技能包（分发给宿主的 Skill）在独立仓库：
+[ai-capability-store · skills/readloop](https://github.com/LyraWang6688/ai-capability-store/tree/main/skills/readloop)
+
+## 项目状态
+
+| 部分 | 状态 |
+|---|---|
+| 架构 / 规则 / 理论文档 | ✅ |
+| 技能包（Skill） | ✅ 已进 AI Capability Store |
+| 记忆调度（`scheduler.ts`） | ✅ 29 项自测通过 |
+| 判分（`grading.ts`） | ✅ 28 项自测通过，生成式判分零 LLM |
+| 动态难度（`difficulty.ts`） | ✅ 20 项自测通过 |
+| 后端服务（三个接口） | ⏳ 进行中 |
+| Chrome 插件改造 | ⏳ 待做 |
+| 部署与真机验证 | ⏳ 待做 |
 
 ## 技术栈
 
-- **框架**: Next.js 16.1.1 (App Router)
-- **UI 组件**: shadcn/ui (基于 Radix UI)
-- **样式**: Tailwind CSS v4
-- **表单**: React Hook Form + Zod
-- **图标**: Lucide React
-- **字体**: Geist Sans & Geist Mono
-- **包管理器**: pnpm 9+
-- **TypeScript**: 5.x
+- **当前仓库**：Next.js 16 / React 19 / TypeScript
+- **技能包**：Markdown（Store 分发）
+- **数据**：飞书多维表格（用户自有）
+- **模型**：用户自带（BYOK），默认推荐 DeepSeek
 
-## 参考文档
+## 本地开发
 
-- [Next.js 官方文档](https://nextjs.org/docs)
-- [shadcn/ui 组件文档](https://ui.shadcn.com)
-- [Tailwind CSS 文档](https://tailwindcss.com/docs)
-- [React Hook Form](https://react-hook-form.com)
+```bash
+pnpm install
+pnpm ts-check    # 类型检查
+```
 
-## 重要提示
+调度逻辑的自测不依赖项目依赖：
 
-1. **必须使用 pnpm** 作为包管理器
-2. **优先使用 shadcn/ui 组件** 而不是从零开发基础组件
-3. **遵循 Next.js App Router 规范**，正确区分服务端/客户端组件
-4. **使用 TypeScript** 进行类型安全开发
-5. **使用 `@/` 路径别名** 导入模块（已配置）
+```bash
+npx tsx scripts/scheduler-check.ts
+```
+
+> 仓库正在从「Web App」重构为「Skill + 后端服务 + 插件」，旧的页面代码保留但不再是主链路。
+> 本地运行与部署说明见 [DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+
+## 商业形态
+
+按年授权、非自动续费。用户买的是「一年内持续在线的服务」，数据始终归用户自己——不续费也能带走账本。
+
+见 [ARCHITECTURE.md](docs/ARCHITECTURE.md) §十一。

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ReadLoop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">ReadLoop</p>
+        <h1>在真实网页里练习英文阅读</h1>
+        <p class="muted">先自己翻译，再让 AI 帮你看见真正的薄弱点。</p>
+      </section>
+
+      <section class="panel settings-panel">
+        <button id="settingsToggle" class="link-button" type="button">设置 API / 用户</button>
+        <form id="settingsForm" class="settings-form hidden">
+          <label>
+            <span>API Base URL</span>
+            <input id="apiBaseUrl" type="url" placeholder="https://readinsight.bamamei.online" />
+          </label>
+          <label>
+            <span>User ID</span>
+            <input id="userId" type="text" placeholder="local-dev-user" />
+          </label>
+          <button class="secondary-button" type="submit">保存设置</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
+          <h2>网页选中文本</h2>
+          <button id="refreshSelectionButton" class="secondary-button" type="button">刷新选区</button>
+        </div>
+        <textarea id="selectedText" class="text-area original" placeholder="在网页中选中一段英文，或直接粘贴到这里。"></textarea>
+        <p id="sourceMeta" class="meta"></p>
+      </section>
+
+      <section class="panel">
+        <h2>你的翻译</h2>
+        <textarea id="userTranslation" class="text-area" placeholder="先用自己的话翻译这段英文。"></textarea>
+        <button id="diagnoseButton" class="primary-button" type="button">开始 AI 对比诊断</button>
+      </section>
+
+      <section id="resultPanel" class="panel hidden">
+        <h2>AI 诊断结果</h2>
+
+        <div class="result-block">
+          <h3>参考翻译</h3>
+          <p id="aiTranslation" class="result-text"></p>
+        </div>
+
+        <div class="result-block">
+          <h3>理解正确</h3>
+          <div id="correctList" class="feedback-list"></div>
+        </div>
+
+        <div class="result-block">
+          <h3>可以优化</h3>
+          <div id="alternativeList" class="feedback-list"></div>
+        </div>
+
+        <div class="result-block">
+          <h3>遗漏要点</h3>
+          <div id="missedList" class="feedback-list"></div>
+        </div>
+      </section>
+
+      <section id="knowledgePanel" class="panel hidden">
+        <div class="section-title">
+          <h2>可沉淀知识点</h2>
+          <span id="knowledgeCount" class="pill">0</span>
+        </div>
+        <div id="knowledgeList" class="knowledge-list"></div>
+        <button id="saveKnowledgeButton" class="primary-button" type="button">存入知识库</button>
+      </section>
+
+      <section class="panel">
+        <button id="openWebAppButton" class="link-button" type="button">打开 ReadLoop Web App</button>
+      </section>
+
+      <div id="toast" class="toast hidden"></div>
+    </main>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
