@@ -1,14 +1,17 @@
+# ReadLoop 后端服务
+#
+# 单副本！创建会话存在进程内存里（见 docs/API_IMPLEMENTATION.md），不要 scale 多副本。
 services:
-  readinsight:
+  readloop:
     build:
       context: .
-    image: readinsight-web:latest
-    container_name: readinsight-web
+    image: readloop-service:latest
+    container_name: readloop-service
     restart: unless-stopped
+    # 生产密钥放 /opt/readloop/.env：LICENSE_SECRET / QUESTION_ID_SECRET / PORT
     env_file:
       - .env
     environment:
-      COZE_PROJECT_ENV: PROD
       HOSTNAME: 0.0.0.0
       PORT: 3000
     ports:

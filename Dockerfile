@@ -1,42 +1,40 @@
-FROM node:22.13-bookworm-slim AS base
+# ReadLoop 后端服务（Next.js 16，standalone 产物）
+#
+# 只跑一个 Node 进程：/api/setup/app/* 的创建会话存在进程内存里（见 docs/API_IMPLEMENTATION.md），
+# 所以不能横向扩多副本，也不适合 serverless。单容器即可，重启会丢未完成的创建会话（可接受）。
+
+FROM node:22-bookworm-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-WORKDIR /app
-
 RUN npm install -g pnpm@11.0.6
+WORKDIR /app
 
 FROM base AS deps
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
 
 COPY . .
-
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm exec next build
 
-RUN pnpm next build
-RUN pnpm tsup src/server.ts --format cjs --platform node --target node22 --outDir dist --no-splitting --no-minify
-RUN pnpm prune --prod
+FROM node:22-bookworm-slim AS runner
 
-FROM base AS runner
-
+WORKDIR /app
 ENV NODE_ENV=production
-ENV COZE_PROJECT_ENV=PROD
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+# standalone 自带精简后的 node_modules 与 server.js；静态资源要单独拷
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "server.js"]

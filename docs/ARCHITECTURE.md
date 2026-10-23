@@ -74,7 +74,8 @@ AI 宿主（豆包工作 / Codex / Work Buddy）本身就是一个成熟 agent�
 ┌────────────────────┐
 │  Chrome 插件（划词） │  选中一段 → 我翻 + AI 翻 → 三维度对比 → 原子级知识点
 └─────────┬──────────┘
-          │ POST /api/capture（去重后写入）
+          │ POST /api/diagnose（诊断，服务端不存数据）
+          │ 诊断结果由插件直连飞书写入（用户自建应用）
           ▼
 ┌──────────────────────────────────────────────┐
 │  多维表格：知识点 / 采集 / 答题 / 今日题        │
@@ -384,7 +385,7 @@ Codex / Work Buddy 留到第二阶段，其余宿主暂不考虑。
 | 步骤 | 内容 | 验收 |
 |---|---|---|
 | 0 | 用户复制模板到自己的飞书 → Skill 用宿主飞书能力核对结构 → 接入码换 `host_token` | 四张表字段齐全，可读可写 |
-| 1 | 插件 → `/api/capture` → 去重入库 | 同一段再采集不新增，只增加练习债务 |
+| 1 | 插件 → `/api/diagnose` → 插件直连飞书去重入库（不经过我们的存储） | 同一段再采集不新增，只增加练习债务 |
 | 2 | 宿主读知识点 → `POST /api/review/today` → 返回 8 题 | 题目无答案，题型交错 |
 | 3 | 宿主答题 → `POST /api/review/submit` → 返回 `updates` → 宿写回表 | 答对间隔推后，答错次日必出 |
 | 4 | 宿主定时任务触发 | 连续 7 天不断链 |
@@ -443,16 +444,24 @@ Codex / Work Buddy 留到第二阶段，其余宿主暂不考虑。
 
 ## 九、现有代码对照
 
+> 更新于 2026-10-23/24：接口层与插件已按本架构实现，服务端保持无状态（不使用数据库）。
+> 实现细节见 [API_IMPLEMENTATION.md](./API_IMPLEMENTATION.md)。
+
 | 能力 | 状态 | 位置 |
 |---|---|---|
 | 划词捕获 | ✅ 可用 | `extension/src/content-script.js` |
 | 侧边栏交互（翻译 / 诊断 / 知识点 / 入库） | ✅ 界面齐备 | `extension/src/sidepanel/` |
-| 插件图标 | ❌ 缺失，导致扩展无法加载 | `extension/manifest.json` 引用的 `assets/icons/*` |
-| 采集入库 | ⚠️ 走旧接口，无采集记录 | `src/app/api/knowledge/route.ts` |
-| 身份 | ❌ 客户端传 `userId`，多用户下是越权漏洞 | 同上 |
-| 记忆调度 | ❌ 未实现 | — |
+| 插件图标 | ✅ 已补齐（16/32/48/128） | `extension/assets/icons/` |
+| 采集入库 | ✅ 插件直连飞书（用户自建应用） | `extension/src/lib/feishu.js` |
+| 身份 | ✅ 授权码 → host_token（HMAC，无状态） | `src/lib/token.ts`、`/api/license/activate` |
+| 记忆调度 | ✅ 纯函数 + 单测 | `src/lib/scheduler.ts` |
+| 判分 | ✅ 纯函数 + 单测 | `src/lib/grading.ts` |
+| 每日组题 | ✅ 确定性选题 + 确定性题面 | `src/lib/selection.ts`、`src/lib/questions.ts` |
+| 宿主接口 | ✅ `/api/review/today`、`/api/review/submit` | `src/app/api/review/` |
+| 一键创建接入应用 | ✅ `registerApp` + 三项校验 + 配对码 | `src/app/api/setup/app/`、`src/lib/feishu/` |
 | 宿主接入（Skill） | ✅ 已进 Store | [skills/readloop](https://github.com/LyraWang6688/ai-capability-store/blob/main/skills/readloop/SKILL.md) |
-| 多维表格存储 | ❌ 未开始（现为 PostgreSQL + Drizzle） | `src/lib/db.ts` |
+| 多维表格存储 | ✅ 数据在用户自己的 Base（服务端不访问） | `extension/src/lib/feishu.js`（插件写）/ 宿主飞书能力（读写） |
+| 翻译诊断 | ✅ BYOK + 防 SSRF | `/api/diagnose`、`src/lib/model.ts` |
 
 ---
 

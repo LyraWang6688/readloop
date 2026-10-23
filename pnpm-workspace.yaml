@@ -1,8 +1,11 @@
 allowBuilds:
   esbuild: true
   msw: true
+  protobufjs: false
   sharp: true
   unrs-resolver: true
 
-# pnpm store 放到用户目录，避免在仓库里生成 600M 的 .pnpm-store
-storeDir: ~/.pnpm-store
+# pnpm store 放在仓库内，已加入 .gitignore（不提交）。
+# 原因：沙箱 / CI 只能写工作区，写到 ~/.pnpm-store 会被拒绝（EPERM）。
+# 想放回用户目录：改成 storeDir: ~/.pnpm-store，并在本机执行 pnpm install。
+storeDir: ./.pnpm-store

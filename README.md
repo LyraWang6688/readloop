@@ -29,7 +29,7 @@ AI 对比你的翻译和参考译文，揪出没掌握的表达
 它记得你上周卡在哪个表达、这次是新错还是老错——因为它在读你的账本，而不是随机抽题。
 
 **3. 规则有出处，参数靠数据校准**
-每条调度规则都能追到记忆科学的出处（[MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md)），并且会用你的真实作答数据持续修正。详见下方文档。
+每条调度规则都能追到记忆科学的出处（[MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md)），并且会用你的真实作答数据持续修正。
 
 ## 结构
 
@@ -47,27 +47,48 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 文档 | 内容 |
 |---|---|
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 产品架构、宿主接入、数据层、MVP 范围 |
+| [API_IMPLEMENTATION.md](docs/API_IMPLEMENTATION.md) | 接口实现规格：签名/选题/题面/配对/幂等 |
 | [REVIEW_RULES.md](docs/REVIEW_RULES.md) | 复习与出题规则（确定性部分） |
 | [MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md) | 规则的理论依据、现存偏差、待验证假设 |
 | [DECISIONS.md](docs/DECISIONS.md) | 决策记录：为什么这么定 |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | 部署方案与服务器现状 |
+| [CHROME_EXTENSION_MVP.md](docs/CHROME_EXTENSION_MVP.md) | 插件加载、配置、配对码、自测 |
+| [CHROME_WEB_STORE_CHECKLIST.md](docs/CHROME_WEB_STORE_CHECKLIST.md) | 商店上架清单与权限说明 |
 | [PRODUCT_POSITIONING.md](docs/PRODUCT_POSITIONING.md) | 产品定位与目标用户 |
 
 技能包（分发给宿主的 Skill）在独立仓库：
 [ai-capability-store · skills/readloop](https://github.com/LyraWang6688/ai-capability-store/tree/main/skills/readloop)
+
+## 接口一览
+
+| 接口 | 作用 | 鉴权 |
+|---|---|---|
+| `POST /api/license/activate` | 8 位授权码 → `host_token`（年度） | 无 |
+| `POST /api/review/today` | 传知识点 + 模型配置 → 今日题（`question_id` 签名） | Bearer |
+| `POST /api/review/submit` | 提交一题 → 判分 + `updates`（服务端算好，宿主只抄写） | Bearer |
+| `POST /api/setup/app/start` | 用飞书 Device Grant 帮用户一键创建自己的飞书应用 | Bearer |
+| `GET /api/setup/app/status` | 轮询创建结果 + 三项校验 | Bearer |
+| `POST/GET /api/setup/app/pair` | 配对码绑定 / 插件一次性取凭证 | Bearer / 配对码 |
+| `POST /api/diagnose` | 翻译诊断（插件调用，BYOK + 防 SSRF） | Bearer |
+
+服务端**无数据库、不存用户数据**；授权、题目都靠 HMAC 签名自包含。
 
 ## 项目状态
 
 | 部分 | 状态 |
 |---|---|
 | 架构 / 规则 / 理论文档 | ✅ |
-| 技能包（Skill） | ✅ 已进 AI Capability Store |
-| 记忆调度（`scheduler.ts`） | ✅ 29 项自测通过 |
-| 判分（`grading.ts`） | ✅ 28 项自测通过，生成式判分零 LLM |
-| 动态难度（`difficulty.ts`） | ✅ 20 项自测通过 |
-| 后端服务（三个接口） | ⏳ 进行中 |
-| Chrome 插件改造 | ⏳ 待做 |
-| 部署与真机验证 | ⏳ 待做 |
+| 技能包（Skill） | ✅ 已进 AI Capability Store（**需按 `docs/API_IMPLEMENTATION.md` §10 同步契约**） |
+| 记忆调度（`scheduler.ts`） | ✅ 29 项自测 |
+| 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
+| 动态难度（`difficulty.ts`） | ✅ 20 项自测 |
+| 日期 / 签名（`date.ts` / `token.ts`） | ✅ 22 + 29 项自测 |
+| 每日组题（`selection.ts` / `questions.ts`） | ✅ 89 项自测 |
+| today/submit 编排（`review.ts`） | ✅ 91 项自测 |
+| 一键创建应用（`src/lib/feishu/`） | ✅ 61 项自测（真实飞书链路未验，需真机） |
+| 接口端到端冒烟 | ✅ 49 项（`bash scripts/smoke-api.sh`） |
+| Chrome 插件 | ✅ 可加载（图标/飞书直写/配对码）；真实凭证联调待做 |
+| 部署与真机验证 | ⏳ 待做（服务器 SSH / 证书） |
 
 ## 技术栈
 
@@ -80,17 +101,37 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 
 ```bash
 pnpm install
-pnpm ts-check    # 类型检查
+pnpm dev          # http://localhost:3000
+pnpm ts-check     # 类型检查
+pnpm build        # 生产构建
 ```
 
-调度逻辑的自测不依赖项目依赖：
+纯函数自测（不依赖网络/数据库）：
 
 ```bash
-npx tsx scripts/scheduler-check.ts
+npx tsx scripts/scheduler-check.ts     # 29
+npx tsx scripts/grading-check.ts       # 28
+npx tsx scripts/difficulty-check.ts    # 20
+npx tsx scripts/date-check.ts          # 22
+npx tsx scripts/token-check.ts         # 29
+npx tsx scripts/selection-check.ts     # 89
+npx tsx scripts/review-check.ts        # 91
+npx tsx scripts/setup-app-check.ts     # 61
 ```
 
-> 仓库正在从「Web App」重构为「Skill + 后端服务 + 插件」，旧的页面代码保留但不再是主链路。
-> 本地运行与部署说明见 [DEPLOYMENT.md](docs/DEPLOYMENT.md)。
+端到端冒烟（起一个真实 `next start`，不调飞书/模型）：
+
+```bash
+bash scripts/smoke-api.sh              # 49 项
+```
+
+发授权码（离线计算，不写库）：
+
+```bash
+LICENSE_SECRET=你的密钥 npx tsx scripts/license-gen.ts 10
+```
+
+> 本地环境变量见 [.env.example](.env.example)；部署说明见 [DEPLOYMENT.md](docs/DEPLOYMENT.md)。
 
 ## 商业形态
 

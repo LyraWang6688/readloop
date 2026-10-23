@@ -1,7 +1,7 @@
 # 项目上下文 - ReadLoop
 
 > **当前架构（2026-10-23 起）**：Chrome 插件采集 → 用户自己的飞书多维表格 → 后端服务算规则 → AI 宿主每天陪练。
-> 动手前先读：[ARCHITECTURE.md](docs/ARCHITECTURE.md)、[REVIEW_RULES.md](docs/REVIEW_RULES.md)、[MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md)、[DECISIONS.md](docs/DECISIONS.md)。
+> 动手前先读：[ARCHITECTURE.md](docs/ARCHITECTURE.md)、[REVIEW_RULES.md](docs/REVIEW_RULES.md)、[MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md)、[DECISIONS.md](docs/DECISIONS.md)、[API_IMPLEMENTATION.md](docs/API_IMPLEMENTATION.md)（接口实现规格：签名/选题/配对）。
 
 ## 技术栈
 
@@ -22,7 +22,11 @@ src/
 │   ├── robots.ts
 │   ├── privacy/page.tsx          # 隐私政策（Chrome 商店要求）
 │   └── api/
-│       └── diagnose/route.ts     # 翻译诊断（插件调用）
+│       ├── diagnose/route.ts     # 翻译诊断（插件调用，BYOK）
+│       ├── license/activate/     # 授权码 → host_token
+│       ├── review/today/         # 选题 + 出题（确定性 + 签名）
+│       ├── review/submit/        # 判分 + updates（状态快照在签名里）
+│       └── setup/app/            # 一键创建用户飞书应用（start/status/pair）
 ├── components/
 │   ├── client-layout.tsx
 │   ├── error-boundary.tsx
@@ -31,7 +35,14 @@ src/
 │   ├── scheduler.ts              # 记忆调度（纯函数）
 │   ├── grading.ts                # 判分（纯函数）
 │   ├── difficulty.ts             # 动态难度（纯函数）
-│   ├── llm.ts                    # LLM 封装（待切 DeepSeek）
+│   ├── selection.ts              # 每日选题（纯函数，确定性）
+│   ├── questions.ts              # 题面构造（纯函数）
+│   ├── review.ts                 # today/submit 编排
+│   ├── token.ts                  # 授权码 / host_token / question_id 签名
+│   ├── date.ts                   # 上海时区日期工具
+│   ├── http.ts                   # 响应信封 / 鉴权 / 错误码
+│   ├── feishu/                   # 一键创建应用：会话、注册、三项校验
+│   ├── llm.ts                    # LLM 封装（BYOK，OpenAI 兼容）
 │   ├── logger.ts
 │   ├── client-logger.ts
 │   └── utils.ts
@@ -46,16 +57,24 @@ docs/archive/                     # 历史文档（Coze 时代的方案）
 ## 常用命令
 
 ```bash
-pnpm install
+pnpm install        # store 在仓库内 .pnpm-store/（已 gitignore；沙箱只能写工作区）
 pnpm dev          # next dev
 pnpm build        # next build
 pnpm ts-check     # tsc --noEmit
 pnpm lint
 
-# 纯函数自测（不依赖项目依赖）
+# 纯函数自测（不依赖网络/数据库），也可以用 ./node_modules/.bin/tsx 直接跑
 npx tsx scripts/scheduler-check.ts
 npx tsx scripts/grading-check.ts
 npx tsx scripts/difficulty-check.ts
+npx tsx scripts/date-check.ts
+npx tsx scripts/token-check.ts
+npx tsx scripts/selection-check.ts
+npx tsx scripts/review-check.ts
+npx tsx scripts/setup-app-check.ts
+
+# 发授权码（离线计算，不写库；换 LICENSE_SECRET 会让旧码全失效）
+LICENSE_SECRET=你的密钥 npx tsx scripts/license-gen.ts 10
 ```
 
 ## 环境变量
@@ -64,11 +83,13 @@ npx tsx scripts/difficulty-check.ts
 
 ## 开发注意事项
 
-1. **确定性逻辑不得引入 LLM**：`scheduler.ts` / `grading.ts` / `difficulty.ts` 是纯函数，判分与间隔只能由代码决定。
+1. **确定性逻辑不得引入 LLM**：`scheduler.ts` / `grading.ts` / `difficulty.ts` / `selection.ts` / `questions.ts` 是纯函数，判分、选题与间隔只能由代码决定。
 2. **agent 是嘴，不是脑子**：语气与表达交给宿主模型，对错与复习时间由工具返回。
 3. **数据归用户**：服务端不存储任何用户数据，也不直接访问飞书表格（由宿主用自己的飞书能力读写）。
-4. **文档同步**：改规则要同步 `docs/REVIEW_RULES.md` 与 `docs/MEMORY_SCIENCE.md`，改决策要写进 `docs/DECISIONS.md`。
-5. **技能包不在这里**：改动 `skills/readloop` 请去 Store 仓库，本仓库不再保留副本。
+4. **服务端无状态**：身份、题目、授权都靠 HMAC 签名（`src/lib/token.ts`，规格见 `docs/API_IMPLEMENTATION.md` §2）。不要为了「方便」加缓存库或会话库。
+5. **凭证永不进日志/上下文**：`api_key`、`app_secret`、完整 `host_token` 不得出现在日志、错误 `details` 或宿主的对话里（插件用配对码自取）。
+6. **文档同步**：改规则要同步 `docs/REVIEW_RULES.md` 与 `docs/MEMORY_SCIENCE.md`，改决策要写进 `docs/DECISIONS.md`，改接口要同步 `docs/API_IMPLEMENTATION.md` 与 Store 的 `references/api.md`。
+7. **技能包不在这里**：改动 `skills/readloop` 请去 Store 仓库，本仓库不再保留副本。
 
 ## 历史说明
 

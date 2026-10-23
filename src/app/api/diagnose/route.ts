@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { performFullDiagnosis } from "@/lib/llm";
 import { ModelConfigError, normalizeModelConfig } from "@/lib/model";
+import { requireHost } from "@/lib/http";
 import { logger } from "@/lib/logger";
 import type { DiagnoseResponse, ApiResponse } from "@/types";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 interface DiagnoseBody {
   articleId?: string;
@@ -16,6 +20,10 @@ interface DiagnoseBody {
 // POST /api/diagnose
 export async function POST(request: NextRequest) {
   try {
+    // 插件 / 宿主都要先有 host_token（年度授权）；401 / 402 的语义与其它接口一致
+    const guard = requireHost(request);
+    if (!guard.ok) return guard.response;
+
     const body = (await request.json()) as DiagnoseBody;
     const { articleId, paragraphId, originalParagraph, userTranslation } = body;
 

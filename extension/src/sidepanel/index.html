@@ -11,22 +11,89 @@
       <section class="hero">
         <p class="eyebrow">ReadLoop</p>
         <h1>在真实网页里练习英文阅读</h1>
-        <p class="muted">先自己翻译，再让 AI 帮你看见真正的薄弱点。</p>
+        <p class="muted">先自己翻译，再让 AI 帮你看见真正的薄弱点，一键存进你自己的飞书表格。</p>
       </section>
 
-      <section class="panel settings-panel">
-        <button id="settingsToggle" class="link-button" type="button">设置 API / 用户</button>
-        <form id="settingsForm" class="settings-form hidden">
-          <label>
-            <span>API Base URL</span>
-            <input id="apiBaseUrl" type="url" placeholder="https://readinsight.bamamei.online" />
-          </label>
-          <label>
-            <span>User ID</span>
-            <input id="userId" type="text" placeholder="local-dev-user" />
-          </label>
-          <button class="secondary-button" type="submit">保存设置</button>
+      <section id="notice" class="notice hidden" role="status" aria-live="polite"></section>
+
+      <section class="panel">
+        <div class="section-title">
+          <h2>连接状态</h2>
+          <button id="settingsToggle" class="link-button" type="button">设置</button>
+        </div>
+        <div id="configStatus" class="status-list"></div>
+      </section>
+
+      <section id="settingsPanel" class="panel hidden">
+        <h2>设置</h2>
+        <form id="settingsForm" class="settings-form" autocomplete="off">
+          <fieldset class="field-group">
+            <legend>ReadLoop 服务</legend>
+            <label>
+              <span>服务地址</span>
+              <input id="apiBaseUrl" type="url" placeholder="https://readinsight.bamamei.online" />
+            </label>
+            <label>
+              <span>host_token（授权后由 AI 宿主提供）</span>
+              <input id="hostToken" type="password" placeholder="粘贴 host_token，只保存在本机" />
+            </label>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend>模型（BYOK，只随请求上传，不落库）</legend>
+            <label>
+              <span>服务商 provider</span>
+              <input id="modelProvider" type="text" placeholder="deepseek" />
+            </label>
+            <label>
+              <span>模型 base_url</span>
+              <input id="modelBaseUrl" type="url" placeholder="https://api.deepseek.com/v1" />
+            </label>
+            <label>
+              <span>模型名</span>
+              <input id="modelName" type="text" placeholder="deepseek-chat" />
+            </label>
+            <label>
+              <span>模型 API Key</span>
+              <input id="modelApiKey" type="password" placeholder="sk-…（只保存在 chrome.storage.local）" />
+            </label>
+          </fieldset>
+
+          <fieldset class="field-group">
+            <legend>飞书多维表格（用户自建应用）</legend>
+            <label>
+              <span>App ID</span>
+              <input id="feishuAppId" type="text" placeholder="cli_…" />
+            </label>
+            <label>
+              <span>App Secret</span>
+              <input id="feishuAppSecret" type="password" placeholder="只保存在 chrome.storage.local" />
+            </label>
+            <label>
+              <span>表格链接 / app_token</span>
+              <input id="feishuTableUrl" type="text" placeholder="https://xxx.feishu.cn/base/xxxx?table=tblxxxx" />
+            </label>
+            <p id="appTokenHint" class="meta"></p>
+          </fieldset>
+
+          <div class="button-row">
+            <button id="saveSettingsButton" class="primary-button compact" type="submit">保存设置</button>
+            <button id="testFeishuButton" class="secondary-button" type="button">测试飞书连接</button>
+          </div>
         </form>
+      </section>
+
+      <section class="panel">
+        <h2>一键配置（配对码）</h2>
+        <p class="muted small">不用手抄 App Secret：这里生成 6 位码，把码告诉 AI 宿主，凭证会自动送进插件。</p>
+        <div id="pairingIdle" class="pairing-idle">
+          <button id="startPairingButton" class="secondary-button" type="button">生成配对码</button>
+        </div>
+        <div id="pairingActive" class="pairing-active hidden">
+          <p id="pairCode" class="pair-code">000000</p>
+          <p id="pairStatus" class="meta"></p>
+          <button id="cancelPairingButton" class="secondary-button" type="button">取消配对</button>
+        </div>
       </section>
 
       <section class="panel">
@@ -74,11 +141,15 @@
           <span id="knowledgeCount" class="pill">0</span>
         </div>
         <div id="knowledgeList" class="knowledge-list"></div>
-        <button id="saveKnowledgeButton" class="primary-button" type="button">存入知识库</button>
+        <button id="saveKnowledgeButton" class="primary-button" type="button">一键存入我的飞书表格</button>
+        <p class="meta small">
+          写入前会按「归一化内容」查重：已有的点累加暴露次数与待练次数，没有的才新建。
+        </p>
+        <div id="syncSummary" class="sync-summary hidden"></div>
       </section>
 
       <section class="panel">
-        <button id="openWebAppButton" class="link-button" type="button">打开 ReadLoop Web App</button>
+        <button id="openWebAppButton" class="link-button" type="button">打开 ReadLoop 服务地址</button>
       </section>
 
       <div id="toast" class="toast hidden"></div>

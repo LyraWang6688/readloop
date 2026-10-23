@@ -15,3 +15,10 @@ logs
 Dockerfile
 docker-compose*.yml
 readinsight.tar.gz
+
+# 不进运行时镜像：插件单独分发，文档/脚本/历史素材与镜像无关
+extension
+docs
+scripts
+assets
+HANDOFF.md
