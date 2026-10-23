@@ -78,7 +78,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | 部分 | 状态 |
 |---|---|
 | 架构 / 规则 / 理论文档 | ✅ |
-| 技能包（Skill） | ✅ 已进 Store，契约已同步到 `readloop-v0.2.0`（PR #291） |
+| 技能包（Skill） | ✅ 已进 Store，契约同步到 `readloop-v0.2.2` / `readloop-service-v0.2.1`（PR #291/#294） |
 | 记忆调度（`scheduler.ts`） | ✅ 29 项自测 |
 | 判分（`grading.ts`） | ✅ 28 项自测，生成式判分零 LLM |
 | 动态难度（`difficulty.ts`） | ✅ 20 项自测 |
@@ -95,7 +95,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 
 - 地址：<https://readinsight.bamamei.online>
 - 健康检查：<https://readinsight.bamamei.online/api/health>
-- 发布：`bash scripts/deploy-server.sh`（源码 SSH 同步 → Docker 重建 → 健康检查）
+- 发布：`bash scripts/deploy-server.sh`（git push → 服务器 `git pull` → Docker 重建 → 健康检查）
 - 部署细节与服务器现状：[DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 ## 技术栈

@@ -411,10 +411,16 @@ lark.registerApp({
 
 ## 十、与 Store 文档的差异（✅ 已同步）
 
-> 2026-10-23：Store 的 `skills/readloop` 已按本节同步，版本 **0.2.0**，
-> PR <https://github.com/LyraWang6688/ai-capability-store/pull/291>，tag `readloop-v0.2.0`
-> （`check_tag_version.py --missing main` 通过：42 个已登记版本都有 tag）。
-> 以后再改接口，按本节同样流程更新 Store 文档并 bump 版本 + 打 tag。
+> 2026-10-23：Store 的 `skills/readloop` 已按本节同步，并持续跟进：
+>
+> | 版本 | 内容 | PR / tag |
+> |---|---|---|
+> | readloop 0.2.0 / readloop-service 0.2.0 | 接口契约首次对齐（本节 10 条） | [#291](https://github.com/LyraWang6688/ai-capability-store/pull/291) / `readloop-v0.2.0` |
+> | readloop 0.2.1 | `compatibility` 出网目的地归属修正（另一个会话完成） | [#292](https://github.com/LyraWang6688/ai-capability-store/pull/292) / [#293](https://github.com/LyraWang6688/ai-capability-store/pull/293) / `readloop-v0.2.1` |
+> | readloop 0.2.2 / readloop-service 0.2.1 | 配对时把宿主 `host_token` 一并交给插件（免手填） | [#294](https://github.com/LyraWang6688/ai-capability-store/pull/294) / `readloop-v0.2.2`、`readloop-service-v0.2.1` |
+>
+> `check_tag_version.py --missing main` 通过（42 个已登记版本都有 tag）。
+> 以后再改接口，按本节流程更新 Store 文档并 bump 版本 + 打 tag。
 
 本次同步到 Store `skills/readloop` 的差异清单（留档，改接口时对照）：
 
