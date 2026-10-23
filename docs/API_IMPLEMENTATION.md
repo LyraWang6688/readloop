@@ -519,6 +519,7 @@ lark.registerApp({
 > | readloop 0.2.2 / readloop-service 0.2.1 | 配对时把宿主 `host_token` 一并交给插件（免手填） | [#294](https://github.com/LyraWang6688/ai-capability-store/pull/294) / `readloop-v0.2.2`、`readloop-service-v0.2.1` |
 > | readloop 0.2.3 | 按真实服务/插件核对文档：插件安装指向 Release、README 模型说法纠偏、status 错误码、curl 鉴权头等 8 处 | [#302](https://github.com/LyraWang6688/ai-capability-store/pull/302) / `readloop-v0.2.3` |
 > | readloop 0.2.4 / readloop-service 0.2.2 | 学习效果指标（`/api/review/metrics`）+ `today.performance` / `difficulty` + `practice_events.复习间隔` | [#305](https://github.com/LyraWang6688/ai-capability-store/pull/305) / `readloop-v0.2.4`、`readloop-service-v0.2.2` |
+> | readloop-service 0.2.3 | 规则评估结论元数据（SM-2 vs FSRS 回放 verdict） | [#306](https://github.com/LyraWang6688/ai-capability-store/pull/306) / `readloop-service-v0.2.3` |
 >
 > `check_tag_version.py --missing main` 通过（42 个已登记版本都有 tag）。
 > 以后再改接口，按本节流程更新 Store 文档并 bump 版本 + 打 tag。

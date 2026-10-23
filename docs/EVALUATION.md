@@ -3,6 +3,7 @@
 > 目的：回答「要不要把现在的 SM-2 调度换成 FSRS」——不靠直觉，用同一套指标做回放对比。
 > 脚本：[`scripts/replay-compare.ts`](../scripts/replay-compare.ts)（`--practice` 可回放真实日志）
 > 指标口径：[`REVIEW_RULES.md`](./REVIEW_RULES.md) §十一、`POST /api/review/metrics`
+> 结论已同步到 Store：`readloop-service 0.2.3`（PR #306，tag `readloop-service-v0.2.3`）
 
 ## 一、方法
 
