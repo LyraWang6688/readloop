@@ -131,9 +131,10 @@ done
 git ls-files | grep -i handoff || echo "OK：没有 handoff 进库"
 ```
 
-**2026-10-24 核对结果**：无遗留 worktree；Store 主 checkout 在 `main` 且干净（`22080a1`）；
-ReadLoop 干净（`26a3dab`）；`/tmp/readloop-secrets.env` 已不存在；Store worktree 列表里仅主 checkout
-与其它会话的 `.dsh-wt-skill2`。
+**2026-10-24 核对结果**：无遗留 worktree；Store 主 checkout 在 `main` 且干净（记录时 `22080a1`；
+Store 会被其它会话持续更新，当前值以核对命令为准）；ReadLoop 干净（`26a3dab`，文档提交后为 `391cd7e`）；
+`/tmp/readloop-secrets.env` 已不存在；记录时 Store worktree 里另有其它会话的 `.dsh-wt-skill2`，
+本次未触碰，随后已被其创建者清理。
 
 ## 六、今后规则
 
