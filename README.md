@@ -52,6 +52,7 @@ Chrome 插件（采集）  →  你的飞书多维表格（数据）  →  后�
 | [MEMORY_SCIENCE.md](docs/MEMORY_SCIENCE.md) | 规则的理论依据、现存偏差、待验证假设 |
 | [EVALUATION.md](docs/EVALUATION.md) | 规则离线回放：SM-2 vs FSRS 的对比与结论 |
 | [DECISIONS.md](docs/DECISIONS.md) | 决策记录：为什么这么定 |
+| [PRIVILEGED_OPS.md](docs/PRIVILEGED_OPS.md) | 越权磁盘操作记录（Store worktree / 权限升级审计） |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | 部署方案与服务器现状 |
 | [CHROME_EXTENSION_MVP.md](docs/CHROME_EXTENSION_MVP.md) | 插件加载、配置、配对码、自测 |
 | [CHROME_WEB_STORE_CHECKLIST.md](docs/CHROME_WEB_STORE_CHECKLIST.md) | 商店上架清单与权限说明 |
