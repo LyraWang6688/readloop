@@ -95,7 +95,17 @@ ReadLoop 的技能包（`skills/readloop`）**不在本仓库**，在独立的 S
 | 结果 | PR #390 合并（`f8d788e`，合并后 main `26929ed`）；tag `readloop-v0.2.5`、`readloop-extension-v0.3.2`、`readloop-extension-pack-v0.1.0`；Release `readloop-extension-v0.3.2` |
 | 清理 | worktree / 分支已删 |
 
-### 3.7 `/tmp` 临时文件（非升级，但一并登记）
+### 3.7 PR #391：回放/发码 procedures + 编排 0.1.2（2026-10-27）
+
+| 项 | 内容 |
+|---|---|
+| worktree | `/Users/wangying/Documents/workplace/readloop-prb-wt`，分支 `feat/readloop-procedures-orchestration` |
+| 升级操作 | `git fetch` / `worktree add` / 写文件 / 实跑 procedures / `git tag` / worktree remove |
+| 改动 | 新增 `procedures/readloop-replay-eval`、`procedures/readloop-license-issue`；编排 `readloop-daily-self-api` 0.1.2（插件入口 + procedures + metrics 周度指标）；registry 两条 procedure + 编排版本 |
+| 结果 | PR #391 合并（`af9fb57`）；tag `readloop-replay-eval-v0.1.0`、`readloop-license-issue-v0.1.0`、`readloop-daily-self-api-v0.1.2`；覆盖 56/56 |
+| 清理 | worktree / 分支已删；本地 Store main 已快进到 `af9fb57` |
+
+### 3.8 `/tmp` 临时文件（非升级，但一并登记）
 
 | 文件 | 用途 | 状态 |
 |---|---|---|
@@ -141,7 +151,7 @@ done
 git ls-files | grep -i handoff || echo "OK：没有 handoff 进库"
 ```
 
-**2026-10-27 核对结果**：无遗留 worktree；Store 主 checkout 在 `main` 且干净（记录时 `26929ed`；
+**2026-10-27 核对结果**：无遗留 worktree；Store 主 checkout 在 `main` 且干净（PR B 后 `af9fb57`；
 Store 会被其它会话持续更新，当前值以核对命令为准）；ReadLoop 干净（`26a3dab`，文档提交后为 `391cd7e`）；
 `/tmp/readloop-secrets.env` 已不存在；记录时 Store worktree 里另有其它会话的 `.dsh-wt-skill2`，
 本次未触碰，随后已被其创建者清理。

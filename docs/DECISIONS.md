@@ -35,6 +35,16 @@
 - ReadLoop 仓库删除 `extension/` 与 `scripts/pack-extension.sh`；服务端代码零改动，**无需重新部署**
 - 验证：Store validate 2122/0；tag 覆盖 54/54；ReadLoop tsc/build/10 组单测/75 项冒烟全过
 
+**第二刀（PR B，同日晚）**
+
+- `procedures/readloop-replay-eval`：本地入口 → 取服务仓库跑 `replay-compare.ts`，不复制 `src/lib`
+- `procedures/readloop-license-issue`：只读 `LICENSE_SECRET`，本地生成授权码
+- `orchestrations/readloop/readloop-daily-self-api` 0.1.1 → 0.1.2：补插件入口、procedures 工具链、
+  `POST /api/review/metrics` 周度指标
+- 合并后 tag：`readloop-replay-eval-v0.1.0`、`readloop-license-issue-v0.1.0`、
+  `readloop-daily-self-api-v0.1.2`；Store tag 覆盖 56/56
+- 服务仓库零改动；部署文件原位保留
+
 **边界规则（今后）**
 
 - 用户装的东西（skill / 浏览器插件 / 确定性工具）→ Store
