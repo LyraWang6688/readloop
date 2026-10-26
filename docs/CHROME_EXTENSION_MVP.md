@@ -1,6 +1,8 @@
+> **源码位置（2026-10-27 起）**：插件已迁至 Store 仓库 `external-capabilities/plugin/chrome/readloop-external-capabilities/plugin/chrome/readloop-extension/`；本文中的 `external-capabilities/plugin/chrome/readloop-extension/` 路径均指该目录，发布见 <https://github.com/LyraWang6688/ai-capability-store/releases/tag/readloop-extension-v0.3.2>。
+
 # Chrome 插件（MV3）开发与使用
 
-`extension/` 是一个静态 Manifest V3 插件，**无构建步骤**，直接用 Chrome「加载已解压的扩展程序」即可。
+`external-capabilities/plugin/chrome/readloop-extension/` 是一个静态 Manifest V3 插件，**无构建步骤**，直接用 Chrome「加载已解压的扩展程序」即可。
 
 它不连数据库、不在代码里内置任何密钥。两条外部通道：
 
@@ -16,10 +18,10 @@
 
 1. （可选）启动服务：`pnpm dev`（本地默认 `http://localhost:3000`）
 2. 打开 `chrome://extensions` → 右上角打开 Developer mode → 「Load unpacked」
-3. 选择仓库里的 `extension/` 目录
+3. 选择仓库里的 `external-capabilities/plugin/chrome/readloop-extension/` 目录
 4. 点工具栏的 ReadLoop 图标打开侧边栏
 
-图标产物在 `extension/assets/icons/`，由 `node extension/tools/gen-icons.mjs` 生成（无第三方依赖）。
+图标产物在 `external-capabilities/plugin/chrome/readloop-extension/assets/icons/`，由 `node external-capabilities/plugin/chrome/readloop-extension/tools/gen-icons.mjs` 生成（无第三方依赖）。
 
 ## 首次配置（侧边栏设置区）
 
@@ -65,9 +67,9 @@ Chrome 选区
 ## 本地自测（不依赖真实凭证）
 
 ```bash
-node extension/tools/selftest.mjs                              # 逻辑自测（假 chrome.* / fetch）
-node --experimental-vm-modules extension/tools/selftest.mjs    # 同上，显式开 vm 模块
-node extension/tools/browser-smoke.mjs                         # headless Chrome 真加载扩展（mock 网络）
+node external-capabilities/plugin/chrome/readloop-extension/tools/selftest.mjs                              # 逻辑自测（假 chrome.* / fetch）
+node --experimental-vm-modules external-capabilities/plugin/chrome/readloop-extension/tools/selftest.mjs    # 同上，显式开 vm 模块
+node external-capabilities/plugin/chrome/readloop-extension/tools/browser-smoke.mjs                         # headless Chrome 真加载扩展（mock 网络）
 ```
 
 `browser-smoke.mjs` 用 Playwright 的 Chrome for Testing，自动加

@@ -449,10 +449,10 @@ Codex / Work Buddy 留到第二阶段，其余宿主暂不考虑。
 
 | 能力 | 状态 | 位置 |
 |---|---|---|
-| 划词捕获 | ✅ 可用 | `extension/src/content-script.js` |
-| 侧边栏交互（翻译 / 诊断 / 知识点 / 入库） | ✅ 界面齐备 | `extension/src/sidepanel/` |
-| 插件图标 | ✅ 已补齐（16/32/48/128） | `extension/assets/icons/` |
-| 采集入库 | ✅ 插件直连飞书（用户自建应用） | `extension/src/lib/feishu.js` |
+| 划词捕获 | ✅ 可用 | `external-capabilities/plugin/chrome/readloop-extension/src/content-script.js` |
+| 侧边栏交互（翻译 / 诊断 / 知识点 / 入库） | ✅ 界面齐备 | `external-capabilities/plugin/chrome/readloop-extension/src/sidepanel/` |
+| 插件图标 | ✅ 已补齐（16/32/48/128） | `external-capabilities/plugin/chrome/readloop-extension/assets/icons/` |
+| 采集入库 | ✅ 插件直连飞书（用户自建应用） | `external-capabilities/plugin/chrome/readloop-extension/src/lib/feishu.js` |
 | 身份 | ✅ 授权码 → host_token（HMAC，无状态） | `src/lib/token.ts`、`/api/license/activate` |
 | 记忆调度 | ✅ 纯函数 + 单测 | `src/lib/scheduler.ts` |
 | 判分 | ✅ 纯函数 + 单测 | `src/lib/grading.ts` |
@@ -460,7 +460,7 @@ Codex / Work Buddy 留到第二阶段，其余宿主暂不考虑。
 | 宿主接口 | ✅ `/api/review/today`、`/api/review/submit` | `src/app/api/review/` |
 | 一键创建接入应用 | ✅ `registerApp` + 三项校验 + 配对码 | `src/app/api/setup/app/`、`src/lib/feishu/` |
 | 宿主接入（Skill） | ✅ 已进 Store | [skills/readloop](https://github.com/LyraWang6688/ai-capability-store/blob/main/skills/readloop/SKILL.md) |
-| 多维表格存储 | ✅ 数据在用户自己的 Base（服务端不访问） | `extension/src/lib/feishu.js`（插件写）/ 宿主飞书能力（读写） |
+| 多维表格存储 | ✅ 数据在用户自己的 Base（服务端不访问） | `external-capabilities/plugin/chrome/readloop-extension/src/lib/feishu.js`（插件写）/ 宿主飞书能力（读写） |
 | 翻译诊断 | ✅ BYOK + 防 SSRF | `/api/diagnose`、`src/lib/model.ts` |
 
 ---

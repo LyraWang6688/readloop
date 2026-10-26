@@ -1,9 +1,11 @@
+> **源码位置（2026-10-27 起）**：插件已迁至 Store 仓库 `external-capabilities/plugin/chrome/readloop-external-capabilities/plugin/chrome/readloop-extension/`；本文中的 `external-capabilities/plugin/chrome/readloop-extension/` 路径均指该目录，发布见 <https://github.com/LyraWang6688/ai-capability-store/releases/tag/readloop-extension-v0.3.2>。
+
 # Chrome 插件最佳实践审查（2026-10-23）
 
 > 对照对象：Chrome 官方 `GoogleChrome/chrome-extensions-samples` 的 side panel 示例
 > （[sample.sidepanel-dictionary](https://github.com/GoogleChrome/chrome-extensions-samples/tree/main/functional-samples/sample.sidepanel-dictionary)）
 > 与官方 MV3 文档中的 service worker 生命周期、storage、messaging 约定。
-> 结论落在插件 0.3.2（`extension/`），改动面只在 `background.js` / `sidepanel/main.js` / 测试 / 文档。
+> 结论落在插件 0.3.2（`external-capabilities/plugin/chrome/readloop-extension/`），改动面只在 `background.js` / `sidepanel/main.js` / 测试 / 文档。
 > 官方没有「Chrome 插件 SDK / 脚手架」，能对照的就是 samples 和文档，本文件是这次对照的记录。
 
 ## 一、结论摘要
@@ -26,7 +28,7 @@
 
 ## 二、这次改了什么（0.3.2）
 
-1. **`extension/src/background.js`**
+1. **`external-capabilities/plugin/chrome/readloop-extension/src/background.js`**
    - 删除模块级 `selectionsByTab` / `activeTabId`，改存 `chrome.storage.session`：
      `selection:<tabId>` + `activeTabId`；
    - `READINSIGHT_SELECTION_CHANGED` 写入 storage 后再广播；
@@ -35,19 +37,19 @@
    - tab 激活时广播该 tab 选区；tab 关闭时清理该 tab 的键与 `activeTabId`；
    - 右键菜单：记选区 → 打开面板 → 再用 activeTab 向 content script 拉权威 URL/标题；
    - 删除不会触发的 `action.onClicked`（`openPanelOnActionClick` 已开启，由 Chrome 打开面板）。
-2. **`extension/src/sidepanel/main.js`**：订阅 `chrome.storage.session.onChanged`，
+2. **`external-capabilities/plugin/chrome/readloop-extension/src/sidepanel/main.js`**：订阅 `chrome.storage.session.onChanged`，
    `activeTabId` / `selection:*` 变化时重新 `refreshSelection()`；保留 runtime 广播作为即时更新。
 3. **测试**：`tools/selftest.mjs` 的 background 用例重写为 storage.session 语义
    （无缓存补拉、写入持久化、切 tab 广播、关闭清理、SW 重启后恢复）；
    `tools/browser-smoke.mjs` 版本断言改为读 manifest，其余用例全过。
-4. **文档**：`extension/README.md`、`docs/CHROME_EXTENSION_MVP.md` 增加「MV3 生命周期」段。
+4. **文档**：`external-capabilities/plugin/chrome/readloop-extension/README.md`、`docs/CHROME_EXTENSION_MVP.md` 增加「MV3 生命周期」段。
 
 ## 三、验证
 
 ```bash
-node --experimental-vm-modules extension/tools/selftest.mjs   # 27 组断言全过
-node extension/tools/browser-smoke.mjs                        # 真机加载扩展冒烟全过
-node --check 各 js / manifest JSON / 图标尺寸                 # 见 extension/README「开发自查」
+node --experimental-vm-modules external-capabilities/plugin/chrome/readloop-extension/tools/selftest.mjs   # 27 组断言全过
+node external-capabilities/plugin/chrome/readloop-extension/tools/browser-smoke.mjs                        # 真机加载扩展冒烟全过
+node --check 各 js / manifest JSON / 图标尺寸                 # 见 external-capabilities/plugin/chrome/readloop-extension/README「开发自查」
 ```
 
 ## 四、仍未验证（如实）

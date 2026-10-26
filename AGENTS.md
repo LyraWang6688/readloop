@@ -50,7 +50,6 @@ src/
 └── types/index.ts
 
 scripts/                          # 纯函数自测脚本
-extension/                        # Chrome 插件（MV3）
 docs/                             # 架构 / 规则 / 决策 / 部署
 docs/archive/                     # 历史文档（Coze 时代的方案）
 ```
@@ -105,7 +104,7 @@ bash scripts/deploy-server.sh
 5. **改规则先看指标**：调 `scheduler.ts` / `difficulty.ts` / `selection.ts` 前，先用 `/api/review/metrics` 或 `scripts/metrics-check.ts` 做改前/改后对比，结论写进 `docs/REVIEW_RULES.md` §十一。
 6. **凭证永不进日志/上下文**：`api_key`、`app_secret`、完整 `host_token` 不得出现在日志、错误 `details` 或宿主的对话里（插件用配对码自取）。
 7. **文档同步**：改规则要同步 `docs/REVIEW_RULES.md` 与 `docs/MEMORY_SCIENCE.md`，改决策要写进 `docs/DECISIONS.md`，改接口要同步 `docs/API_IMPLEMENTATION.md` 与 Store 的 `references/api.md`。
-8. **技能包不在这里**：改动 `skills/readloop` 请去 Store 仓库，本仓库不再保留副本。
+8. **技能包与插件不在这里**：改动 `skills/readloop` 或 Chrome 插件（Store 的 `external-capabilities/plugin/chrome/readloop-extension/`）请去 Store 仓库，本仓库不再保留副本；打包用 Store 的 `procedures/readloop-extension-pack`。
 
 ## 历史说明
 

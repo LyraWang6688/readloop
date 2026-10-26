@@ -1,8 +1,10 @@
+> **源码位置（2026-10-27 起）**：插件已迁至 Store 仓库 `external-capabilities/plugin/chrome/readloop-external-capabilities/plugin/chrome/readloop-extension/`；本文中的 `external-capabilities/plugin/chrome/readloop-extension/` 路径均指该目录，发布见 <https://github.com/LyraWang6688/ai-capability-store/releases/tag/readloop-extension-v0.3.2>。
+
 # Chrome Web Store Checklist
 
 ## 当前状态
 
-- Manifest：V3，版本 `0.3.0`（`extension/manifest.json`）
+- Manifest：V3，版本 `0.3.2`（`external-capabilities/plugin/chrome/readloop-extension/manifest.json`）
 - 默认服务地址：`https://readinsight.bamamei.online`
 - 隐私政策：`https://readinsight.bamamei.online/privacy`
 - 数据存储：**用户自己的飞书多维表格**（不是我们的数据库；插件本地只存设置与凭证）
@@ -12,7 +14,7 @@
 
 ## 提交前
 
-- 在 Chrome 里 Load unpacked 加载 `extension/`，确认侧边栏能打开、图标正常
+- 在 Chrome 里 Load unpacked 加载 `external-capabilities/plugin/chrome/readloop-extension/`，确认侧边栏能打开、图标正常
 - 在普通 HTTPS 网页测试划词采集（只取选区文本 + 标题 + URL）
 - 用真实 host_token + 真实模型 Key 跑一次 `/api/diagnose`
 - 用真实飞书应用凭证跑一次「一键入库」，确认 `capture_events` / `knowledge_points` 两张表被正确写入
