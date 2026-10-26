@@ -85,7 +85,17 @@ ReadLoop 的技能包（`skills/readloop`）**不在本仓库**，在独立的 S
 | `check_tag_version.py --missing main` 偶发 | `origin/main is not reachable from main` | 本地 `main` 引用落后时的误报；改用 `--missing origin/main` 复核，tag 指向已合并的 `origin/main` 提交 |
 | `pnpm add -D ts-fsrs`（装在 ReadLoop 内） | 网络超时（未成功、未污染依赖） | 改为内置 `src/lib/fsrs-lite.ts` 实现，不增依赖 |
 
-### 3.6 `/tmp` 临时文件（非升级，但一并登记）
+### 3.6 PR #390：插件源码迁入 Store（2026-10-27）
+
+| 项 | 内容 |
+|---|---|
+| worktree | `/Users/wangying/Documents/workplace/readloop-store-wt`，分支 `feat/readloop-assets-registration` |
+| 升级操作 | `git fetch` / `worktree add` / `cp -a` 插件源码 / 写文件 / `git tag` / `worktree remove` |
+| 改动 | 新生态 `external-capabilities/plugin/chrome/`（插件源码）；新 procedure `readloop-extension-pack`；`skills/readloop` 0.2.5 + `references/chrome-extension.md`；`validate_store.py` 的 `CAPABILITY_ECOSYSTEMS` 增加 `chrome` |
+| 结果 | PR #390 合并（`f8d788e`，合并后 main `26929ed`）；tag `readloop-v0.2.5`、`readloop-extension-v0.3.2`、`readloop-extension-pack-v0.1.0`；Release `readloop-extension-v0.3.2` |
+| 清理 | worktree / 分支已删 |
+
+### 3.7 `/tmp` 临时文件（非升级，但一并登记）
 
 | 文件 | 用途 | 状态 |
 |---|---|---|
@@ -131,7 +141,7 @@ done
 git ls-files | grep -i handoff || echo "OK：没有 handoff 进库"
 ```
 
-**2026-10-24 核对结果**：无遗留 worktree；Store 主 checkout 在 `main` 且干净（记录时 `22080a1`；
+**2026-10-27 核对结果**：无遗留 worktree；Store 主 checkout 在 `main` 且干净（记录时 `26929ed`；
 Store 会被其它会话持续更新，当前值以核对命令为准）；ReadLoop 干净（`26a3dab`，文档提交后为 `391cd7e`）；
 `/tmp/readloop-secrets.env` 已不存在；记录时 Store worktree 里另有其它会话的 `.dsh-wt-skill2`，
 本次未触碰，随后已被其创建者清理。

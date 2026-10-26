@@ -10,6 +10,39 @@
 
 ---
 
+## 2026-10-27 · 资产拆分：插件进 Store，服务端与部署留在 ReadLoop
+
+**结论**：可分发资产与要部署的运行时分开存放。
+
+| 放 Store（可分发资产） | 留 ReadLoop（部署） |
+|---|---|
+| `skills/readloop`（0.2.5） | `src/` 服务端 API |
+| `external-capabilities/plugin/chrome/readloop-extension/`（0.3.2） | `Dockerfile` / `docker-compose.yml` / `deploy-server.sh` |
+| `procedures/readloop-extension-pack`（0.1.0） | 启动 `next start` 的 `scripts/smoke-api.sh` |
+| `orchestrations/readloop-daily-self-api`（已有） | 服务器 `.env`、SSH/域名/证书 |
+
+**为什么不是「整个项目迁进 Store」**
+
+- Store 是**资产目录 + 契约 + 编排**，不托管运行时；服务端在 Store 里只以 `hosting: external` 登记端点与契约。
+- 部署脚本绑定的是**这台服务器**（IP、SSH、路径、密钥），不是可复用资产；搬进 Store 会让每次发 Store 都触发一次服务端部署，发版节奏被运维拖住。
+- 但**插件不是运行时**：它是用户装进浏览器的静态资产，应该和 skill 一起分发 → 因此迁入 Store。
+
+**执行**
+
+- 插件源码 `git mv` 语义迁入 `external-capabilities/plugin/chrome/readloop-extension/`；`chrome` 声明为 capability ecosystem（shelf 仍 closed）
+- 打包改由 `procedures/readloop-extension-pack`：manifest 校验 → zip → 版本/清单校验 → sha256
+- Store Release `readloop-extension-v0.3.2`（43,887 bytes，sha256 `68c44e67…`）
+- ReadLoop 仓库删除 `extension/` 与 `scripts/pack-extension.sh`；服务端代码零改动，**无需重新部署**
+- 验证：Store validate 2122/0；tag 覆盖 54/54；ReadLoop tsc/build/10 组单测/75 项冒烟全过
+
+**边界规则（今后）**
+
+- 用户装的东西（skill / 浏览器插件 / 确定性工具）→ Store
+- 我们跑的东西（API / 容器 / 定时器部署）→ 服务仓库 + `external-capabilities` 登记
+- 打包/评估/发码这类不依赖服务器状态的脚本 → Store `procedures/`
+
+---
+
 ## 2026-10-24 · 调度器暂不切换：FSRS 只在离线回放里作为候选
 
 **结论**：线上继续用 `scheduler.ts` 的 SM-2 简化版；FSRS-4.5 只在离线回放里存在
